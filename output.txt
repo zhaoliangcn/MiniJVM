@@ -1,0 +1,130 @@
+Loading class file: LoopTest.class
+Loaded class: LoopTest
+Methods: 2
+  - <init> ()V
+  - main ([Ljava/lang/String;)V
+[DEBUG] PC=0, opcode=03
+[DEBUG] PC=1, opcode=3C
+[DEBUG] istore_1: local[1] = 0
+[DEBUG] PC=2, opcode=04
+[DEBUG] PC=3, opcode=3D
+[DEBUG] istore_2: local[2] = 1
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 1
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 3
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 6
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 10
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 15
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 21
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 28
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 36
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 45
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=10, opcode=1B
+[DEBUG] PC=11, opcode=1C
+[DEBUG] PC=12, opcode=60
+[DEBUG] PC=13, opcode=3C
+[DEBUG] istore_1: local[1] = 55
+[DEBUG] PC=14, opcode=84
+[DEBUG] PC=17, opcode=A7
+[DEBUG] goto: opcode_pos=17, offset_bytes=FFF3, offset=-13, target_pc=4
+[DEBUG] PC=4, opcode=1C
+[DEBUG] PC=5, opcode=10
+[DEBUG] PC=7, opcode=A3
+[DEBUG] PC=20, opcode=B2
+[DEBUG] PC=23, opcode=1B
+[DEBUG] PC=24, opcode=B6
+55
+[DEBUG] PC=27, opcode=B1
+--- Execution Finished ---

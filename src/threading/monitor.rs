@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use crate::error::{ThreadingError, Result};
+use crate::error::{ThreadingError, JvmError, Result};
 use super::thread::Thread;
 
 pub struct Monitor {

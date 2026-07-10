@@ -1,5 +1,5 @@
 use std::collections::{HashSet, VecDeque};
-use crate::error::{GcError, Result};
+use crate::error::{GcError, JvmError, Result};
 use crate::runtime::{Heap, HeapObject, JvmStack, Value};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10,7 +10,7 @@ pub enum GcAlgorithm {
     Generational,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GcState {
     Idle,
     Marking,
@@ -66,11 +66,11 @@ impl GcCollector {
         self.allocated_since_last_gc = 0;
         
         match self.algorithm {
-            GcAlgorithm::MarkSweep => self.mark_sweep(),
-            GcAlgorithm::Copying => self.copying(),
-            GcAlgorithm::MarkCompact => self.mark_compact(),
-            GcAlgorithm::Generational => self.generational(),
-        }?
+            GcAlgorithm::MarkSweep => self.mark_sweep()?,
+            GcAlgorithm::Copying => self.copying()?,
+            GcAlgorithm::MarkCompact => self.mark_compact()?,
+            GcAlgorithm::Generational => self.generational()?,
+        }
         
         self.state = GcState::Idle;
         Ok(())

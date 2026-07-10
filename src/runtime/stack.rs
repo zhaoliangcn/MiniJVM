@@ -1,5 +1,5 @@
 use std::vec::Vec;
-use crate::error::{RuntimeError, Result};
+use crate::error::{RuntimeError, JvmError, Result};
 use super::value::Value;
 use super::method_area::Method;
 

@@ -32,8 +32,8 @@ pub enum ClassFileError {
     #[error("Unsupported class file version: {0}.{1}")]
     UnsupportedVersion(u16, u16),
     
-    #[error("Invalid constant pool tag: {0}")]
-    InvalidConstantPoolTag(u8),
+    #[error("Invalid constant pool tag at index: {0}")]
+    InvalidConstantPoolTag(usize),
     
     #[error("Constant pool index out of bounds: {0}")]
     ConstantPoolIndexOutOfBounds(usize),

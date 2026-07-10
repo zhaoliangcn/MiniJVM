@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, Condvar};
 use std::thread as std_thread;
-use crate::error::{ThreadingError, Result};
+use crate::error::{ThreadingError, JvmError, Result};
 use crate::runtime::{JvmStack, Frame};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -14,7 +14,7 @@ pub enum ThreadState {
     Terminated,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThreadPriority {
     Min = 1,
     Low = 2,

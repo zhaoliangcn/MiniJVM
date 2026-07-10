@@ -2,7 +2,7 @@ use std::io::{Read, Cursor};
 use super::types::{ClassFile, FieldInfo, MethodInfo};
 use super::constant_pool::{ConstantPool, CpInfo};
 use super::attributes::{Attribute, CodeAttribute, ExceptionTableEntry, StackMapTable, LineNumberTable, SourceFile};
-use crate::error::{ClassFileError, Result};
+use crate::error::{ClassFileError, JvmError, Result};
 
 pub struct ClassFileParser<'a> {
     cursor: Cursor<&'a [u8]>,
@@ -163,7 +163,7 @@ impl<'a> ClassFileParser<'a> {
                 let name_index = self.read_u16()? as usize;
                 Ok(CpInfo::Package(name_index))
             }
-            _ => Err(ClassFileError::InvalidConstantPoolTag(tag)),
+            _ => Err(ClassFileError::InvalidConstantPoolTag(tag as usize)),
         }
     }
 
@@ -247,25 +247,35 @@ impl<'a> ClassFileParser<'a> {
 
     fn parse_code_attribute(&self, data: &mut &[u8], constant_pool: &ConstantPool) -> Result<Attribute> {
         let mut cursor = Cursor::new(*data);
-        let max_stack = cursor.read_u16()? as usize;
-        let max_locals = cursor.read_u16()? as usize;
-        let code_length = cursor.read_u32()? as usize;
+        let mut buf = [0u8; 2];
+        cursor.read_exact(&mut buf)?;
+        let max_stack = u16::from_be_bytes(buf) as usize;
+        cursor.read_exact(&mut buf)?;
+        let max_locals = u16::from_be_bytes(buf) as usize;
+        let mut buf4 = [0u8; 4];
+        cursor.read_exact(&mut buf4)?;
+        let code_length = u32::from_be_bytes(buf4) as usize;
         let mut code = vec![0u8; code_length];
         cursor.read_exact(&mut code)?;
         
-        let exception_table_length = cursor.read_u16()? as usize;
+        cursor.read_exact(&mut buf)?;
+        let exception_table_length = u16::from_be_bytes(buf) as usize;
         let mut exception_table = Vec::with_capacity(exception_table_length);
         for _ in 0..exception_table_length {
-            let start_pc = cursor.read_u16()? as usize;
-            let end_pc = cursor.read_u16()? as usize;
-            let handler_pc = cursor.read_u16()? as usize;
-            let catch_type = cursor.read_u16()? as usize;
+            cursor.read_exact(&mut buf)?;
+            let start_pc = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let end_pc = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let handler_pc = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let catch_type = u16::from_be_bytes(buf) as usize;
             exception_table.push(ExceptionTableEntry::new(start_pc, end_pc, handler_pc, catch_type));
         }
         
         let mut remaining_data = vec![0u8; cursor.get_ref().len() - cursor.position() as usize];
         cursor.read_exact(&mut remaining_data)?;
-        let mut remaining_cursor = Cursor::new(&remaining_data);
+        let remaining_cursor = Cursor::new(remaining_data.as_slice());
         let mut attr_parser = ClassFileParser { cursor: remaining_cursor };
         let attributes = attr_parser.parse_attributes(constant_pool)?;
 
@@ -280,11 +290,15 @@ impl<'a> ClassFileParser<'a> {
 
     fn parse_line_number_table(&self, data: &mut &[u8]) -> Result<Attribute> {
         let mut cursor = Cursor::new(*data);
-        let table_length = cursor.read_u16()? as usize;
+        let mut buf = [0u8; 2];
+        cursor.read_exact(&mut buf)?;
+        let table_length = u16::from_be_bytes(buf) as usize;
         let mut entries = Vec::with_capacity(table_length);
         for _ in 0..table_length {
-            let start_pc = cursor.read_u16()? as usize;
-            let line_number = cursor.read_u16()? as usize;
+            cursor.read_exact(&mut buf)?;
+            let start_pc = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let line_number = u16::from_be_bytes(buf) as usize;
             entries.push(super::attributes::LineNumberEntry { start_pc, line_number });
         }
         Ok(Attribute::LineNumberTable(LineNumberTable { entries }))

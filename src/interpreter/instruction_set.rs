@@ -1,204 +1,8 @@
 use std::collections::HashMap;
-use crate::error::{InterpreterError, RuntimeError, Result};
+use crate::error::{ClassFileError, InterpreterError, RuntimeError, JvmError, Result};
 use crate::runtime::{JVM, Value, Frame, HeapObject};
-use crate::classfile::ClassFile;
 
 pub type InstructionHandler = fn(&mut Frame, &mut JVM) -> Result<usize>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Opcode {
-    Nop = 0x00,
-    AconstNull = 0x01,
-    IconstM1 = 0x02,
-    Iconst0 = 0x03,
-    Iconst1 = 0x04,
-    Iconst2 = 0x05,
-    Iconst3 = 0x06,
-    Iconst4 = 0x07,
-    Iconst5 = 0x08,
-    Lconst0 = 0x09,
-    Lconst1 = 0x0A,
-    Fconst0 = 0x0B,
-    Fconst1 = 0x0C,
-    Fconst2 = 0x0D,
-    Dconst0 = 0x0E,
-    Dconst1 = 0x0F,
-    Bipush = 0x10,
-    Sipush = 0x11,
-    Ldc = 0x12,
-    LdcW = 0x13,
-    Ldc2W = 0x14,
-    Iload = 0x15,
-    Lload = 0x16,
-    Fload = 0x17,
-    Dload = 0x18,
-    Aload = 0x19,
-    Iload0 = 0x1A,
-    Iload1 = 0x1B,
-    Iload2 = 0x1C,
-    Iload3 = 0x1D,
-    Lload0 = 0x1E,
-    Lload1 = 0x1F,
-    Lload2 = 0x20,
-    Lload3 = 0x21,
-    Fload0 = 0x22,
-    Fload1 = 0x23,
-    Fload2 = 0x24,
-    Fload3 = 0x25,
-    Dload0 = 0x26,
-    Dload1 = 0x27,
-    Dload2 = 0x28,
-    Dload3 = 0x29,
-    Aload0 = 0x2A,
-    Aload1 = 0x2B,
-    Aload2 = 0x2C,
-    Aload3 = 0x2D,
-    Iaload = 0x2E,
-    Laload = 0x2F,
-    Faload = 0x30,
-    Daload = 0x31,
-    Aaload = 0x32,
-    Baload = 0x33,
-    Caload = 0x34,
-    Saload = 0x35,
-    Istore = 0x36,
-    Lstore = 0x37,
-    Fstore = 0x38,
-    Dstore = 0x39,
-    Astore = 0x3A,
-    Istore0 = 0x3B,
-    Istore1 = 0x3C,
-    Istore2 = 0x3D,
-    Istore3 = 0x3E,
-    Lstore0 = 0x3F,
-    Lstore1 = 0x40,
-    Lstore2 = 0x41,
-    Lstore3 = 0x42,
-    Fstore0 = 0x43,
-    Fstore1 = 0x44,
-    Fstore2 = 0x45,
-    Fstore3 = 0x46,
-    Dstore0 = 0x47,
-    Dstore1 = 0x48,
-    Dstore2 = 0x49,
-    Dstore3 = 0x4A,
-    Astore0 = 0x4B,
-    Astore1 = 0x4C,
-    Astore2 = 0x4D,
-    Astore3 = 0x4E,
-    Iastore = 0x4F,
-    Lastore = 0x50,
-    Fastore = 0x51,
-    Dastore = 0x52,
-    Aastore = 0x53,
-    Bastore = 0x54,
-    Castore = 0x55,
-    Sastore = 0x56,
-    Pop = 0x57,
-    Pop2 = 0x58,
-    Dup = 0x59,
-    DupX1 = 0x5A,
-    DupX2 = 0x5B,
-    Dup2 = 0x5C,
-    Dup2X1 = 0x5D,
-    Dup2X2 = 0x5E,
-    Swap = 0x5F,
-    Iadd = 0x60,
-    Ladd = 0x61,
-    Fadd = 0x62,
-    Dadd = 0x63,
-    Isub = 0x64,
-    Lsub = 0x65,
-    Fsub = 0x66,
-    Dsub = 0x67,
-    Imul = 0x68,
-    Lmul = 0x69,
-    Fmul = 0x6A,
-    Dmul = 0x6B,
-    Idiv = 0x6C,
-    Ldiv = 0x6D,
-    Fdiv = 0x6E,
-    Ddiv = 0x6F,
-    Irem = 0x70,
-    Lrem = 0x71,
-    Frem = 0x72,
-    Drem = 0x73,
-    Ineg = 0x74,
-    Lneg = 0x75,
-    Fneg = 0x76,
-    Dneg = 0x77,
-    Ishl = 0x78,
-    Lshl = 0x79,
-    Ishr = 0x7A,
-    Lshr = 0x7B,
-    Iushr = 0x7C,
-    Lushr = 0x7D,
-    Iand = 0x7E,
-    Land = 0x7F,
-    Ior = 0x80,
-    Lor = 0x81,
-    Ixor = 0x82,
-    Lxor = 0x83,
-    Iinc = 0x84,
-    Icmpg = 0x96,
-    Icmpl = 0x97,
-    Lcmp = 0x98,
-    Fcmpl = 0x99,
-    Fcmpg = 0x9A,
-    Dcmpl = 0x9B,
-    Dcmpg = 0x9C,
-    Ifeq = 0x99,
-    Ifne = 0x9A,
-    Iflt = 0x9B,
-    Ifge = 0x9C,
-    Ifgt = 0x9D,
-    Ifle = 0x9E,
-    IfIcmpEq = 0x9F,
-    IfIcmpNe = 0xA0,
-    IfIcmpLt = 0xA1,
-    IfIcmpGe = 0xA2,
-    IfIcmpGt = 0xA3,
-    IfIcmpLe = 0xA4,
-    IfAcmpEq = 0xA5,
-    IfAcmpNe = 0xA6,
-    Goto = 0xA7,
-    GotoW = 0xA8,
-    Jsr = 0xA9,
-    JsrW = 0xAA,
-    Ret = 0xAB,
-    Tableswitch = 0xAA,
-    Lookupswitch = 0xAB,
-    Ireturn = 0xAC,
-    Lreturn = 0xAD,
-    Freturn = 0xAE,
-    Dreturn = 0xAF,
-    Areturn = 0xB0,
-    Return = 0xB1,
-    Getstatic = 0xB2,
-    Putstatic = 0xB3,
-    Getfield = 0xB4,
-    Putfield = 0xB5,
-    Invokevirtual = 0xB6,
-    Invokespecial = 0xB7,
-    Invokestatic = 0xB8,
-    Invokeinterface = 0xB9,
-    Invokedynamic = 0xBA,
-    New = 0xBB,
-    Newarray = 0xBC,
-    Anewarray = 0xBD,
-    Arraylength = 0xBE,
-    Athrow = 0xBF,
-    Checkcast = 0xC0,
-    Instanceof = 0xC1,
-    Monitorenter = 0xC2,
-    Monitorexit = 0xC3,
-    Wide = 0xC4,
-    Multianewarray = 0xC5,
-    Ifnull = 0xC6,
-    Ifnonnull = 0xC7,
-    GotoW2 = 0xC8,
-    JsrW2 = 0xC9,
-}
 
 pub struct InstructionSet {
     handlers: HashMap<u8, InstructionHandler>,
@@ -479,7 +283,7 @@ fn handle_ldc(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_ldc_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let cp = &class.class_file.constant_pool;
@@ -505,7 +309,7 @@ fn handle_ldc_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_ldc2_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let cp = &class.class_file.constant_pool;
@@ -1220,7 +1024,7 @@ fn handle_return(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 
 fn handle_getstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
@@ -1239,7 +1043,7 @@ fn handle_getstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_putstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
@@ -1255,7 +1059,7 @@ fn handle_putstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_getfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (_class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
@@ -1279,7 +1083,7 @@ fn handle_getfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_putfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (_class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
@@ -1300,7 +1104,7 @@ fn handle_putfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
@@ -1329,7 +1133,7 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
@@ -1358,7 +1162,7 @@ fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
@@ -1382,7 +1186,7 @@ fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let class_name = class.class_file.constant_pool.get_class_name(index)
@@ -1420,7 +1224,7 @@ fn handle_newarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_anewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let class_name = class.class_file.constant_pool.get_class_name(index)
@@ -1481,7 +1285,7 @@ fn handle_monitorexit(_frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 
 fn handle_multianewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let index = usize::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]);
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
     let _dims = code[frame.pc + 3];
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();

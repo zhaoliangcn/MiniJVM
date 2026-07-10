@@ -1,5 +1,5 @@
 use std::fmt;
-use crate::error::{ClassFileError, Result};
+use crate::error::{ClassFileError, JvmError, Result};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CpInfo {
@@ -111,7 +111,7 @@ impl ConstantPool {
                 (*class_index, *name_and_type_index),
             CpInfo::InterfaceMethodRef { class_index, name_and_type_index } => 
                 (*class_index, *name_and_type_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(method_ref_index as u8)),
+            _ => return Err(ClassFileError::InvalidConstantPoolTag(method_ref_index)),
         };
 
         let class_name = self.get_class_name(class_index)
@@ -123,7 +123,7 @@ impl ConstantPool {
         let (name_index, descriptor_index) = match name_and_type {
             CpInfo::NameAndType { name_index, descriptor_index } => 
                 (*name_index, *descriptor_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index as u8)),
+            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index)),
         };
 
         let method_name = self.get_utf8(name_index)
@@ -142,7 +142,7 @@ impl ConstantPool {
         let (class_index, name_and_type_index) = match cp_info {
             CpInfo::FieldRef { class_index, name_and_type_index } => 
                 (*class_index, *name_and_type_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(field_ref_index as u8)),
+            _ => return Err(ClassFileError::InvalidConstantPoolTag(field_ref_index)),
         };
 
         let class_name = self.get_class_name(class_index)
@@ -154,7 +154,7 @@ impl ConstantPool {
         let (name_index, descriptor_index) = match name_and_type {
             CpInfo::NameAndType { name_index, descriptor_index } => 
                 (*name_index, *descriptor_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index as u8)),
+            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index)),
         };
 
         let field_name = self.get_utf8(name_index)
@@ -172,7 +172,7 @@ impl ConstantPool {
         
         let utf8_index = match cp_info {
             CpInfo::String(index) => *index,
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(string_index as u8)),
+            _ => return Err(ClassFileError::InvalidConstantPoolTag(string_index)),
         };
 
         self.get_utf8(utf8_index)

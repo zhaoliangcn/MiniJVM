@@ -14,9 +14,21 @@ impl Interpreter {
     }
 
     pub fn run(&self, jvm: &mut JVM) -> Result<()> {
-        while let Some(frame) = jvm.stack.peek_mut() {
+        loop {
+            if jvm.stack.is_empty() {
+                break;
+            }
+            
+            let mut frame = jvm.stack.pop()?;
+            
+            if frame.method.is_native {
+                if let Some(native_impl) = frame.method.native_impl.clone() {
+                    native_impl(&mut frame, jvm)?;
+                }
+                continue;
+            }
+
             if frame.pc >= frame.method.code.len() {
-                jvm.stack.pop()?;
                 continue;
             }
 
@@ -24,11 +36,13 @@ impl Interpreter {
             let handler = self.instruction_set.get_handler(opcode)
                 .ok_or(InterpreterError::UnknownOpcode(opcode))?;
 
-            let pc_increment = handler(frame, jvm)?;
+            let pc_increment = handler(&mut frame, jvm)?;
             
             if frame.pc < frame.method.code.len() {
                 frame.pc += pc_increment;
             }
+            
+            jvm.stack.push(frame)?;
         }
 
         Ok(())

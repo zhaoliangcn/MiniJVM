@@ -29,12 +29,12 @@ impl Frame {
 
     pub fn pop(&mut self) -> Result<Value> {
         self.operand_stack.pop()
-            .ok_or(RuntimeError::StackUnderflow)
+            .ok_or(JvmError::RuntimeError(RuntimeError::StackUnderflow))
     }
 
     pub fn peek(&self) -> Result<&Value> {
         self.operand_stack.last()
-            .ok_or(RuntimeError::StackUnderflow)
+            .ok_or(JvmError::RuntimeError(RuntimeError::StackUnderflow))
     }
 
     pub fn dup(&mut self) -> Result<()> {
@@ -44,7 +44,7 @@ impl Frame {
 
     pub fn dup_x1(&mut self) -> Result<()> {
         if self.operand_stack.len() < 2 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let v2 = self.pop()?;
         let v1 = self.pop()?;
@@ -55,7 +55,7 @@ impl Frame {
 
     pub fn dup_x2(&mut self) -> Result<()> {
         if self.operand_stack.len() < 3 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let v3 = self.pop()?;
         let v2 = self.pop()?;
@@ -68,7 +68,7 @@ impl Frame {
 
     pub fn dup2(&mut self) -> Result<()> {
         if self.operand_stack.len() < 2 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let v2 = self.operand_stack[self.operand_stack.len() - 2].clone();
         let v1 = self.operand_stack[self.operand_stack.len() - 1].clone();
@@ -78,7 +78,7 @@ impl Frame {
 
     pub fn dup2_x1(&mut self) -> Result<()> {
         if self.operand_stack.len() < 3 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let v3 = self.pop()?;
         let v2 = self.pop()?;
@@ -92,7 +92,7 @@ impl Frame {
 
     pub fn dup2_x2(&mut self) -> Result<()> {
         if self.operand_stack.len() < 4 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let v4 = self.pop()?;
         let v3 = self.pop()?;
@@ -108,7 +108,7 @@ impl Frame {
 
     pub fn swap(&mut self) -> Result<()> {
         if self.operand_stack.len() < 2 {
-            return Err(RuntimeError::StackUnderflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackUnderflow));
         }
         let len = self.operand_stack.len();
         self.operand_stack.swap(len - 1, len - 2);
@@ -117,12 +117,12 @@ impl Frame {
 
     pub fn get_local(&self, index: usize) -> Result<&Value> {
         self.local_variables.get(index)
-            .ok_or(RuntimeError::LocalVariableIndexOutOfBounds(index))
+            .ok_or(JvmError::RuntimeError(RuntimeError::LocalVariableIndexOutOfBounds(index)))
     }
 
     pub fn set_local(&mut self, index: usize, value: Value) -> Result<()> {
         if index >= self.local_variables.len() {
-            return Err(RuntimeError::LocalVariableIndexOutOfBounds(index));
+            return Err(JvmError::RuntimeError(RuntimeError::LocalVariableIndexOutOfBounds(index)));
         }
         self.local_variables[index] = value;
         Ok(())
@@ -153,7 +153,7 @@ impl JvmStack {
 
     pub fn push(&mut self, frame: Frame) -> Result<()> {
         if self.frames.len() >= self.max_depth {
-            return Err(RuntimeError::StackOverflow);
+            return Err(JvmError::RuntimeError(RuntimeError::StackOverflow));
         }
         self.frames.push(frame);
         Ok(())
@@ -161,7 +161,7 @@ impl JvmStack {
 
     pub fn pop(&mut self) -> Result<Frame> {
         self.frames.pop()
-            .ok_or(RuntimeError::StackUnderflow)
+            .ok_or(JvmError::RuntimeError(RuntimeError::StackUnderflow))
     }
 
     pub fn peek(&self) -> Option<&Frame> {

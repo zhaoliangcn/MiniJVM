@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use crate::error::{ThreadingError, Result};
+use crate::error::{ThreadingError, JvmError, Result};
 use super::thread::{Thread, ThreadState, ThreadPriority};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,9 +42,9 @@ impl Scheduler {
 
     pub fn start_thread(&mut self, thread_id: usize) -> Result<()> {
         let thread = self.threads.get_mut(&thread_id)
-            .ok_or(ThreadingError::ThreadCreationFailed)?;
+            .ok_or(JvmError::ThreadingError(ThreadingError::ThreadCreationFailed))?;
         
-        thread.state = ThreadState::Runnable;
+        thread.set_state(ThreadState::Runnable);
         self.add_to_ready_queue(thread_id);
         
         Ok(())
@@ -66,7 +66,7 @@ impl Scheduler {
         };
         
         if let Some(thread) = self.threads.get_mut(&thread_id) {
-            thread.state = ThreadState::Running;
+            thread.set_state(ThreadState::Running);
         }
         
         self.current_thread = Some(thread_id);
@@ -76,10 +76,10 @@ impl Scheduler {
     pub fn yield_thread(&mut self) -> Result<()> {
         if let Some(current_id) = self.current_thread {
             let thread = self.threads.get_mut(&current_id)
-                .ok_or(ThreadingError::ThreadInterrupted)?;
+                .ok_or(JvmError::ThreadingError(ThreadingError::ThreadInterrupted))?;
             
-            if thread.state == ThreadState::Running {
-                thread.state = ThreadState::Runnable;
+            if thread.get_state() == ThreadState::Running {
+                thread.set_state(ThreadState::Runnable);
                 self.add_to_ready_queue(current_id);
                 self.current_thread = None;
             }
@@ -90,9 +90,9 @@ impl Scheduler {
 
     pub fn sleep(&mut self, thread_id: usize, _millis: u64) -> Result<()> {
         let thread = self.threads.get_mut(&thread_id)
-            .ok_or(ThreadingError::ThreadInterrupted)?;
+            .ok_or(JvmError::ThreadingError(ThreadingError::ThreadInterrupted))?;
         
-        thread.state = ThreadState::TimedWaiting;
+        thread.set_state(ThreadState::TimedWaiting);
         
         if Some(thread_id) == self.current_thread {
             self.current_thread = None;
@@ -104,7 +104,7 @@ impl Scheduler {
     pub fn join(&mut self, thread_id: usize) -> Result<()> {
         loop {
             if let Some(thread) = self.threads.get(&thread_id) {
-                if thread.state == ThreadState::Terminated {
+                if thread.get_state() == ThreadState::Terminated {
                     break;
                 }
             } else {
@@ -153,7 +153,7 @@ impl Scheduler {
                     let pos = self.ready_queue.iter()
                         .position(|&id| {
                             let other = self.threads.get(&id).unwrap();
-                            thread.priority > other.priority
+                            thread.get_priority() > other.get_priority()
                         })
                         .unwrap_or(self.ready_queue.len());
                     self.ready_queue.insert(pos, thread_id);
@@ -167,10 +167,10 @@ impl Scheduler {
 
     fn select_highest_priority(&mut self) -> usize {
         let mut highest_id = self.ready_queue[0];
-        let mut highest_priority = self.threads.get(&highest_id).unwrap().priority;
+        let mut highest_priority = self.threads.get(&highest_id).unwrap().get_priority();
         
         for &id in &self.ready_queue {
-            let priority = self.threads.get(&id).unwrap().priority;
+            let priority = self.threads.get(&id).unwrap().get_priority();
             if priority > highest_priority {
                 highest_priority = priority;
                 highest_id = id;

@@ -20,6 +20,7 @@ pub enum CpInfo {
     InvokeDynamic { bootstrap_method_attr_index: u16, name_and_type_index: usize },
     Module(usize),
     Package(usize),
+    RecordComponent { name_index: usize, descriptor_index: usize },
 }
 
 impl fmt::Display for CpInfo {
@@ -50,6 +51,8 @@ impl fmt::Display for CpInfo {
                 write!(f, "InvokeDynamic(BSM#{}, #{})", bootstrap_method_attr_index, name_and_type_index),
             CpInfo::Module(name_index) => write!(f, "Module(#{})", name_index),
             CpInfo::Package(name_index) => write!(f, "Package(#{})", name_index),
+            CpInfo::RecordComponent { name_index, descriptor_index } => 
+                write!(f, "RecordComponent(#{}, #{})", name_index, descriptor_index),
         }
     }
 }
@@ -104,78 +107,78 @@ impl ConstantPool {
 
     pub fn resolve_method_ref(&self, method_ref_index: usize) -> Result<(String, String, String)> {
         let cp_info = self.get(method_ref_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(method_ref_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(method_ref_index)))?;
         
         let (class_index, name_and_type_index) = match cp_info {
             CpInfo::MethodRef { class_index, name_and_type_index } => 
                 (*class_index, *name_and_type_index),
             CpInfo::InterfaceMethodRef { class_index, name_and_type_index } => 
                 (*class_index, *name_and_type_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(method_ref_index)),
+            _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(method_ref_index))),
         };
 
         let class_name = self.get_class_name(class_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(class_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(class_index)))?;
         
         let name_and_type = self.get(name_and_type_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(name_and_type_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_and_type_index)))?;
         
         let (name_index, descriptor_index) = match name_and_type {
             CpInfo::NameAndType { name_index, descriptor_index } => 
                 (*name_index, *descriptor_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index)),
+            _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(name_and_type_index))),
         };
 
         let method_name = self.get_utf8(name_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(name_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_index)))?;
         
         let descriptor = self.get_utf8(descriptor_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(descriptor_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(descriptor_index)))?;
 
         Ok((class_name.replace('/', "."), method_name, descriptor))
     }
 
     pub fn resolve_field_ref(&self, field_ref_index: usize) -> Result<(String, String, String)> {
         let cp_info = self.get(field_ref_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(field_ref_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(field_ref_index)))?;
         
         let (class_index, name_and_type_index) = match cp_info {
             CpInfo::FieldRef { class_index, name_and_type_index } => 
                 (*class_index, *name_and_type_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(field_ref_index)),
+            _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(field_ref_index))),
         };
 
         let class_name = self.get_class_name(class_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(class_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(class_index)))?;
         
         let name_and_type = self.get(name_and_type_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(name_and_type_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_and_type_index)))?;
         
         let (name_index, descriptor_index) = match name_and_type {
             CpInfo::NameAndType { name_index, descriptor_index } => 
                 (*name_index, *descriptor_index),
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(name_and_type_index)),
+            _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(name_and_type_index))),
         };
 
         let field_name = self.get_utf8(name_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(name_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_index)))?;
         
         let descriptor = self.get_utf8(descriptor_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(descriptor_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(descriptor_index)))?;
 
         Ok((class_name.replace('/', "."), field_name, descriptor))
     }
 
     pub fn resolve_string(&self, string_index: usize) -> Result<String> {
         let cp_info = self.get(string_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(string_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(string_index)))?;
         
         let utf8_index = match cp_info {
             CpInfo::String(index) => *index,
-            _ => return Err(ClassFileError::InvalidConstantPoolTag(string_index)),
+            _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(string_index))),
         };
 
-        self.get_utf8(utf8_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(utf8_index))
+        Ok(self.get_utf8(utf8_index)
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(utf8_index)))?)
     }
 }

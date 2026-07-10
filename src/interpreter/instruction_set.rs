@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::error::{ClassFileError, InterpreterError, RuntimeError, JvmError, Result};
+use JvmError::*;
 use crate::runtime::{JVM, Value, Frame, HeapObject};
 
 pub type InstructionHandler = fn(&mut Frame, &mut JVM) -> Result<usize>;
@@ -269,13 +270,14 @@ fn handle_ldc(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         Some(crate::classfile::constant_pool::CpInfo::Float(v)) => {
             frame.push(Value::Float(*v))?;
         }
-        Some(crate::classfile::constant_pool::CpInfo::String(string_index)) => {
-            let s = cp.resolve_string(*string_index)?;
+        Some(crate::classfile::constant_pool::CpInfo::String(utf8_index)) => {
+            let s = cp.get_utf8(*utf8_index)
+                .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(*utf8_index)))?;
             let obj = HeapObject::new_string("java.lang.String".to_string(), s);
             let ref_id = jvm.heap.allocate(obj)?;
             frame.push(Value::ObjectRef(ref_id))?;
         }
-        _ => return Err(InterpreterError::InvalidInstructionFormat(frame.pc)),
+        _ => return Err(JvmError::InterpreterError(InterpreterError::InvalidInstructionFormat(frame.pc))),
     }
     
     Ok(2)
@@ -295,13 +297,14 @@ fn handle_ldc_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         Some(crate::classfile::constant_pool::CpInfo::Float(v)) => {
             frame.push(Value::Float(*v))?;
         }
-        Some(crate::classfile::constant_pool::CpInfo::String(string_index)) => {
-            let s = cp.resolve_string(*string_index)?;
+        Some(crate::classfile::constant_pool::CpInfo::String(utf8_index)) => {
+            let s = cp.get_utf8(*utf8_index)
+                .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(*utf8_index)))?;
             let obj = HeapObject::new_string("java.lang.String".to_string(), s);
             let ref_id = jvm.heap.allocate(obj)?;
             frame.push(Value::ObjectRef(ref_id))?;
         }
-        _ => return Err(InterpreterError::InvalidInstructionFormat(frame.pc)),
+        _ => return Err(JvmError::InterpreterError(InterpreterError::InvalidInstructionFormat(frame.pc))),
     }
     
     Ok(3)
@@ -321,7 +324,7 @@ fn handle_ldc2_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         Some(crate::classfile::constant_pool::CpInfo::Double(v)) => {
             frame.push(Value::Double(*v))?;
         }
-        _ => return Err(InterpreterError::InvalidInstructionFormat(frame.pc)),
+        _ => return Err(JvmError::InterpreterError(InterpreterError::InvalidInstructionFormat(frame.pc))),
     }
     
     Ok(3)
@@ -708,7 +711,7 @@ fn handle_dmul(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 fn handle_idiv(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let b = frame.pop()?.as_int();
     if b == 0 {
-        return Err(RuntimeError::ArithmeticException);
+        return Err(RuntimeError(RuntimeError::ArithmeticException));
     }
     let a = frame.pop()?.as_int();
     frame.push(Value::Int(a / b))?;
@@ -718,7 +721,7 @@ fn handle_idiv(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 fn handle_ldiv(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let b = frame.pop()?.as_long();
     if b == 0 {
-        return Err(RuntimeError::ArithmeticException);
+        return Err(RuntimeError(RuntimeError::ArithmeticException));
     }
     let a = frame.pop()?.as_long();
     frame.push(Value::Long(a / b))?;
@@ -742,7 +745,7 @@ fn handle_ddiv(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 fn handle_irem(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let b = frame.pop()?.as_int();
     if b == 0 {
-        return Err(RuntimeError::ArithmeticException);
+        return Err(RuntimeError(RuntimeError::ArithmeticException));
     }
     let a = frame.pop()?.as_int();
     frame.push(Value::Int(a % b))?;
@@ -752,7 +755,7 @@ fn handle_irem(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 fn handle_lrem(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let b = frame.pop()?.as_long();
     if b == 0 {
-        return Err(RuntimeError::ArithmeticException);
+        return Err(RuntimeError(RuntimeError::ArithmeticException));
     }
     let a = frame.pop()?.as_long();
     frame.push(Value::Long(a % b))?;
@@ -828,14 +831,14 @@ fn handle_lshr(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
 fn handle_iushr(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let shift = frame.pop()?.as_int() & 0x1F;
     let val = frame.pop()?.as_int();
-    frame.push(Value::Int(val as u32 >> shift as i32))?;
+    frame.push(Value::Int((val as u32 >> shift) as i32))?;
     Ok(1)
 }
 
 fn handle_lushr(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let shift = frame.pop()?.as_int() & 0x3F;
     let val = frame.pop()?.as_long();
-    frame.push(Value::Long(val as u64 >> shift as i64))?;
+    frame.push(Value::Long((val as u64 >> shift) as i64))?;
     Ok(1)
 }
 
@@ -1066,7 +1069,7 @@ fn handle_getfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     
     let obj_ref = frame.pop()?;
     if obj_ref.is_null() {
-        return Err(RuntimeError::NullPointerException);
+        return Err(RuntimeError(RuntimeError::NullPointerException));
     }
     
     let obj = jvm.heap.get(obj_ref.as_ref())
@@ -1091,7 +1094,7 @@ fn handle_putfield(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let val = frame.pop()?;
     let obj_ref = frame.pop()?;
     if obj_ref.is_null() {
-        return Err(RuntimeError::NullPointerException);
+        return Err(RuntimeError(RuntimeError::NullPointerException));
     }
     
     let obj = jvm.heap.get_mut(obj_ref.as_ref())
@@ -1116,14 +1119,23 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         .ok_or(RuntimeError::MethodNotFound(class_name, method_name.clone()))?;
     
     let arg_count = parse_method_descriptor(&descriptor).0;
+    let mut args = Vec::with_capacity(arg_count);
     for _ in 0..arg_count {
-        frame.pop()?;
+        args.push(frame.pop()?);
     }
+    args.reverse();
     let this_ref = frame.pop()?;
     
     let mut new_frame = Frame::new(method.clone());
     if !method.is_static {
         new_frame.set_local(0, this_ref)?;
+        for (i, arg) in args.into_iter().enumerate() {
+            new_frame.set_local(i + 1, arg)?;
+        }
+    } else {
+        for (i, arg) in args.into_iter().enumerate() {
+            new_frame.set_local(i, arg)?;
+        }
     }
     
     jvm.stack.push(new_frame)?;
@@ -1190,7 +1202,7 @@ fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let class_name = class.class_file.constant_pool.get_class_name(index)
-        .ok_or(RuntimeError::ConstantPoolIndexOutOfBounds(index))?;
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
     let target_class = jvm.method_area.get_class(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
@@ -1212,7 +1224,7 @@ fn handle_newarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let length = frame.pop()?.as_int() as usize;
     
     if length < 0 {
-        return Err(RuntimeError::NegativeArraySize);
+        return Err(RuntimeError(RuntimeError::NegativeArraySize));
     }
     
     let obj = HeapObject::new_array("[[I".to_string(), length);
@@ -1228,12 +1240,12 @@ fn handle_anewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let class_name = class.class_file.constant_pool.get_class_name(index)
-        .ok_or(RuntimeError::ConstantPoolIndexOutOfBounds(index))?;
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
     let length = frame.pop()?.as_int() as usize;
     
     if length < 0 {
-        return Err(RuntimeError::NegativeArraySize);
+        return Err(RuntimeError(RuntimeError::NegativeArraySize));
     }
     
     let obj = HeapObject::new_array(format!("[L{};", class_name), length);
@@ -1246,7 +1258,7 @@ fn handle_anewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 fn handle_arraylength(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let arr_ref = frame.pop()?;
     if arr_ref.is_null() {
-        return Err(RuntimeError::NullPointerException);
+        return Err(RuntimeError(RuntimeError::NullPointerException));
     }
     
     let obj = jvm.heap.get(arr_ref.as_ref())
@@ -1290,11 +1302,11 @@ fn handle_multianewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let class_name = class.class_file.constant_pool.get_class_name(index)
-        .ok_or(RuntimeError::ConstantPoolIndexOutOfBounds(index))?;
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
     let length = frame.pop()?.as_int() as usize;
     if length < 0 {
-        return Err(RuntimeError::NegativeArraySize);
+        return Err(RuntimeError(RuntimeError::NegativeArraySize));
     }
     
     let obj = HeapObject::new_array(class_name, length);
@@ -1324,7 +1336,7 @@ fn handle_ifnonnull(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     Ok(3)
 }
 
-fn parse_method_descriptor(descriptor: &str) -> (usize, bool) {
+pub fn parse_method_descriptor(descriptor: &str) -> (usize, bool) {
     if !descriptor.starts_with('(') {
         return (0, false);
     }

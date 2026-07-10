@@ -25,7 +25,7 @@ impl Monitor {
         
         if self.owner.is_some() {
             self.waiters.push_back(thread_id);
-            return Err(ThreadingError::IllegalMonitorState);
+            return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
         }
         
         self.owner = Some(thread_id);
@@ -36,7 +36,7 @@ impl Monitor {
 
     pub fn exit(&mut self, thread_id: usize) -> Result<()> {
         if self.owner != Some(thread_id) {
-            return Err(ThreadingError::IllegalMonitorState);
+            return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
         }
         
         self.entry_count -= 1;
@@ -55,7 +55,7 @@ impl Monitor {
 
     pub fn wait(&mut self, thread_id: usize) -> Result<()> {
         if self.owner != Some(thread_id) {
-            return Err(ThreadingError::IllegalMonitorState);
+            return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
         }
         
         self.entry_count -= 1;
@@ -75,7 +75,7 @@ impl Monitor {
 
     pub fn notify(&mut self) -> Result<()> {
         if self.owner.is_none() {
-            return Err(ThreadingError::IllegalMonitorState);
+            return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
         }
         
         if let Some(thread_id) = self.waiters.pop_front() {
@@ -87,7 +87,7 @@ impl Monitor {
 
     pub fn notify_all(&mut self) -> Result<()> {
         if self.owner.is_none() {
-            return Err(ThreadingError::IllegalMonitorState);
+            return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
         }
         
         self.waiters.clear();

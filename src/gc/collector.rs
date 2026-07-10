@@ -59,7 +59,7 @@ impl GcCollector {
 
     pub fn collect(&mut self) -> Result<()> {
         if self.state != GcState::Idle {
-            return Err(GcError::Interrupted);
+            return Err(JvmError::GcError(GcError::Interrupted));
         }
         
         self.state = GcState::Marking;

@@ -25,7 +25,7 @@ impl fmt::Display for Value {
             Value::Double(v) => write!(f, "{}d", v),
             Value::Byte(v) => write!(f, "{}", v),
             Value::Short(v) => write!(f, "{}", v),
-            Value::Char(v) => write!(f, "'{}'", *v as char),
+            Value::Char(v) => write!(f, "'{}'", char::from_u32(*v as u32).unwrap_or('?')),
             Value::Boolean(v) => write!(f, "{}", v),
             Value::ObjectRef(idx) => write!(f, "Ref@{}", idx),
             Value::ArrayRef(idx) => write!(f, "ArrayRef@{}", idx),

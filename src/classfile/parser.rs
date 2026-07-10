@@ -45,7 +45,7 @@ impl<'a> ClassFileParser<'a> {
     fn parse_magic(&mut self) -> Result<()> {
         let magic = self.read_u32()?;
         if magic != 0xCAFEBABE {
-            return Err(ClassFileError::InvalidMagic(magic));
+            return Err(JvmError::ClassFileError(ClassFileError::InvalidMagic(magic)));
         }
         Ok(())
     }
@@ -55,7 +55,7 @@ impl<'a> ClassFileParser<'a> {
         let major_version = self.read_u16()?;
         
         if major_version < 45 || major_version > 61 {
-            return Err(ClassFileError::UnsupportedVersion(major_version, minor_version));
+            return Err(JvmError::ClassFileError(ClassFileError::UnsupportedVersion(major_version, minor_version)));
         }
         
         Ok((minor_version, major_version))
@@ -163,7 +163,12 @@ impl<'a> ClassFileParser<'a> {
                 let name_index = self.read_u16()? as usize;
                 Ok(CpInfo::Package(name_index))
             }
-            _ => Err(ClassFileError::InvalidConstantPoolTag(tag as usize)),
+            21 => {
+                let name_index = self.read_u16()? as usize;
+                let descriptor_index = self.read_u16()? as usize;
+                Ok(CpInfo::RecordComponent { name_index, descriptor_index })
+            }
+            _ => Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(tag as usize))),
         }
     }
 
@@ -224,7 +229,7 @@ impl<'a> ClassFileParser<'a> {
         let length = self.read_u32()? as usize;
         
         let name = constant_pool.get_utf8(name_index)
-            .ok_or(ClassFileError::ConstantPoolIndexOutOfBounds(name_index))?;
+            .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_index)))?;
         
         let mut data = vec![0u8; length];
         self.cursor.read_exact(&mut data)?;

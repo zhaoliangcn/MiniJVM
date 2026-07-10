@@ -14,7 +14,7 @@ pub enum ThreadState {
     Terminated,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ThreadPriority {
     Min = 1,
     Low = 2,
@@ -48,7 +48,7 @@ impl Thread {
 
     pub fn start(&mut self, entry_frame: Frame) -> Result<()> {
         if self.state != ThreadState::New {
-            return Err(ThreadingError::ThreadCreationFailed);
+            return Err(JvmError::ThreadingError(ThreadingError::ThreadCreationFailed));
         }
         
         self.stack.push(entry_frame)?;
@@ -99,6 +99,10 @@ impl Thread {
 
     pub fn get_state(&self) -> ThreadState {
         self.state
+    }
+
+    pub fn set_state(&mut self, state: ThreadState) {
+        self.state = state;
     }
 
     pub fn get_priority(&self) -> ThreadPriority {

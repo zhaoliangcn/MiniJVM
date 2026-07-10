@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::error::{RuntimeError, Result};
+use crate::error::{RuntimeError, JvmError, Result};
 use super::value::Value;
 
 #[derive(Debug, Clone)]
@@ -53,8 +53,8 @@ impl HeapObject {
     pub fn get_array_element(&self, index: usize) -> Result<&Value> {
         match &self.array_elements {
             Some(elements) => elements.get(index)
-                .ok_or(RuntimeError::ArrayIndexOutOfBounds(index)),
-            None => Err(RuntimeError::UnsupportedOperation),
+                .ok_or(JvmError::RuntimeError(RuntimeError::ArrayIndexOutOfBounds(index))),
+            None => Err(JvmError::RuntimeError(RuntimeError::UnsupportedOperationException)),
         }
     }
 
@@ -62,12 +62,12 @@ impl HeapObject {
         match &mut self.array_elements {
             Some(elements) => {
                 if index >= elements.len() {
-                    return Err(RuntimeError::ArrayIndexOutOfBounds(index));
+                    return Err(JvmError::RuntimeError(RuntimeError::ArrayIndexOutOfBounds(index)));
                 }
                 elements[index] = value;
                 Ok(())
             }
-            None => Err(RuntimeError::UnsupportedOperation),
+            None => Err(JvmError::RuntimeError(RuntimeError::UnsupportedOperationException)),
         }
     }
 
@@ -98,7 +98,7 @@ impl Heap {
 
     pub fn allocate(&mut self, object: HeapObject) -> Result<usize> {
         if self.objects.len() >= self.max_size {
-            return Err(RuntimeError::HeapAllocationFailed);
+            return Err(JvmError::RuntimeError(RuntimeError::HeapAllocationFailed));
         }
         
         let id = self.next_id;
@@ -131,7 +131,7 @@ impl Heap {
 
     pub fn deallocate(&mut self, id: usize) -> Result<()> {
         if id == 0 || id >= self.objects.len() {
-            return Err(RuntimeError::NullPointerException);
+            return Err(JvmError::RuntimeError(RuntimeError::NullPointerException));
         }
         
         self.objects[id] = None;

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::error::{ClassFileError, InterpreterError, RuntimeError, JvmError, Result};
+use crate::error::{ClassFileError, InterpreterError, RuntimeError, ThreadingError, JvmError, Result};
 use JvmError::*;
 use crate::runtime::{JVM, Value, Frame, HeapObject};
 
@@ -67,6 +67,14 @@ impl InstructionSet {
         handlers.insert(0x2B, handle_aload_1);
         handlers.insert(0x2C, handle_aload_2);
         handlers.insert(0x2D, handle_aload_3);
+        handlers.insert(0x2E, handle_iaload);
+        handlers.insert(0x2F, handle_laload);
+        handlers.insert(0x30, handle_faload);
+        handlers.insert(0x31, handle_daload);
+        handlers.insert(0x32, handle_aaload);
+        handlers.insert(0x33, handle_baload);
+        handlers.insert(0x34, handle_caload);
+        handlers.insert(0x35, handle_saload);
         handlers.insert(0x36, handle_istore);
         handlers.insert(0x37, handle_lstore);
         handlers.insert(0x38, handle_fstore);
@@ -76,10 +84,30 @@ impl InstructionSet {
         handlers.insert(0x3C, handle_istore_1);
         handlers.insert(0x3D, handle_istore_2);
         handlers.insert(0x3E, handle_istore_3);
+        handlers.insert(0x3F, handle_lstore_0);
+        handlers.insert(0x40, handle_lstore_1);
+        handlers.insert(0x41, handle_lstore_2);
+        handlers.insert(0x42, handle_lstore_3);
+        handlers.insert(0x43, handle_fstore_0);
+        handlers.insert(0x44, handle_fstore_1);
+        handlers.insert(0x45, handle_fstore_2);
+        handlers.insert(0x46, handle_fstore_3);
+        handlers.insert(0x47, handle_dstore_0);
+        handlers.insert(0x48, handle_dstore_1);
+        handlers.insert(0x49, handle_dstore_2);
+        handlers.insert(0x4A, handle_dstore_3);
         handlers.insert(0x4B, handle_astore_0);
         handlers.insert(0x4C, handle_astore_1);
         handlers.insert(0x4D, handle_astore_2);
         handlers.insert(0x4E, handle_astore_3);
+        handlers.insert(0x4F, handle_iastore);
+        handlers.insert(0x50, handle_lastore);
+        handlers.insert(0x51, handle_fastore);
+        handlers.insert(0x52, handle_dastore);
+        handlers.insert(0x53, handle_aastore);
+        handlers.insert(0x54, handle_bastore);
+        handlers.insert(0x55, handle_castore);
+        handlers.insert(0x56, handle_sastore);
         handlers.insert(0x57, handle_pop);
         handlers.insert(0x58, handle_pop2);
         handlers.insert(0x59, handle_dup);
@@ -126,6 +154,12 @@ impl InstructionSet {
         handlers.insert(0x82, handle_ixor);
         handlers.insert(0x83, handle_lxor);
         handlers.insert(0x84, handle_iinc);
+        handlers.insert(0x99, handle_ifeq);
+        handlers.insert(0x9A, handle_ifne);
+        handlers.insert(0x9B, handle_iflt);
+        handlers.insert(0x9C, handle_ifge);
+        handlers.insert(0x9D, handle_ifgt);
+        handlers.insert(0x9E, handle_ifle);
         handlers.insert(0x9F, handle_if_icmpeq);
         handlers.insert(0xA0, handle_if_icmpne);
         handlers.insert(0xA1, handle_if_icmplt);
@@ -157,6 +191,7 @@ impl InstructionSet {
         handlers.insert(0xC1, handle_instanceof);
         handlers.insert(0xC2, handle_monitorenter);
         handlers.insert(0xC3, handle_monitorexit);
+        handlers.insert(0xC4, handle_wide);
         handlers.insert(0xC5, handle_multianewarray);
         handlers.insert(0xC6, handle_ifnull);
         handlers.insert(0xC7, handle_ifnonnull);
@@ -578,6 +613,408 @@ fn handle_astore_3(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     Ok(1)
 }
 
+fn handle_lstore_0(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(0, val)?;
+    Ok(1)
+}
+
+fn handle_lstore_1(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(1, val)?;
+    Ok(1)
+}
+
+fn handle_lstore_2(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(2, val)?;
+    Ok(1)
+}
+
+fn handle_lstore_3(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(3, val)?;
+    Ok(1)
+}
+
+fn handle_fstore_0(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(0, val)?;
+    Ok(1)
+}
+
+fn handle_fstore_1(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(1, val)?;
+    Ok(1)
+}
+
+fn handle_fstore_2(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(2, val)?;
+    Ok(1)
+}
+
+fn handle_fstore_3(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(3, val)?;
+    Ok(1)
+}
+
+fn handle_dstore_0(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(0, val)?;
+    Ok(1)
+}
+
+fn handle_dstore_1(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(1, val)?;
+    Ok(1)
+}
+
+fn handle_dstore_2(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(2, val)?;
+    Ok(1)
+}
+
+fn handle_dstore_3(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let val = frame.pop()?;
+    frame.set_local(3, val)?;
+    Ok(1)
+}
+
+fn handle_iaload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_laload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_faload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_daload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_baload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_caload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_saload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let val = obj.get_array_element(index)?;
+    frame.push(val.clone())?;
+    Ok(1)
+}
+
+fn handle_wide(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let opcode = code[frame.pc + 1];
+    let index = u16::from_be_bytes([code[frame.pc + 2], code[frame.pc + 3]]) as usize;
+    
+    match opcode {
+        0x15 => {
+            let val = frame.get_local(index)?.clone();
+            frame.push(val)?;
+            Ok(4)
+        },
+        0x16 => {
+            let val = frame.get_local(index)?.clone();
+            frame.push(val)?;
+            Ok(4)
+        },
+        0x17 => {
+            let val = frame.get_local(index)?.clone();
+            frame.push(val)?;
+            Ok(4)
+        },
+        0x18 => {
+            let val = frame.get_local(index)?.clone();
+            frame.push(val)?;
+            Ok(4)
+        },
+        0x19 => {
+            let val = frame.get_local(index)?.clone();
+            frame.push(val)?;
+            Ok(4)
+        },
+        0x36 => {
+            let val = frame.pop()?;
+            frame.set_local(index, val)?;
+            Ok(4)
+        },
+        0x37 => {
+            let val = frame.pop()?;
+            frame.set_local(index, val)?;
+            Ok(4)
+        },
+        0x38 => {
+            let val = frame.pop()?;
+            frame.set_local(index, val)?;
+            Ok(4)
+        },
+        0x39 => {
+            let val = frame.pop()?;
+            frame.set_local(index, val)?;
+            Ok(4)
+        },
+        0x3A => {
+            let val = frame.pop()?;
+            frame.set_local(index, val)?;
+            Ok(4)
+        },
+        0x84 => {
+            let const_val = i16::from_be_bytes([code[frame.pc + 4], code[frame.pc + 5]]) as i32;
+            let val = frame.get_local(index)?.as_int() + const_val;
+            frame.set_local(index, Value::Int(val))?;
+            Ok(6)
+        },
+        _ => Ok(1),
+    }
+}
+
+fn handle_istore_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let val = frame.pop()?;
+    frame.set_local(index, val)?;
+    Ok(3)
+}
+
+fn handle_lstore_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let val = frame.pop()?;
+    frame.set_local(index, val)?;
+    Ok(3)
+}
+
+fn handle_fstore_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let val = frame.pop()?;
+    frame.set_local(index, val)?;
+    Ok(3)
+}
+
+fn handle_dstore_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let val = frame.pop()?;
+    frame.set_local(index, val)?;
+    Ok(3)
+}
+
+fn handle_astore_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let val = frame.pop()?;
+    frame.set_local(index, val)?;
+    Ok(3)
+}
+
+fn handle_bastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_castore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_sastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_iastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_lastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_fastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
+fn handle_dastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    Ok(1)
+}
+
 fn handle_pop(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     frame.pop()?;
     Ok(1)
@@ -893,6 +1330,78 @@ fn handle_iinc(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     Ok(3)
 }
 
+fn handle_ifeq(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val == 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
+fn handle_ifne(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val != 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
+fn handle_iflt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val < 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
+fn handle_ifge(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val >= 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
+fn handle_ifgt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val > 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
+fn handle_ifle(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let val = frame.pop()?.as_int();
+    if val <= 0 {
+        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
+    }
+}
+
 fn handle_if_icmpeq(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
     let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
@@ -900,8 +1409,10 @@ fn handle_if_icmpeq(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a == b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_icmpne(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -911,8 +1422,10 @@ fn handle_if_icmpne(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a != b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_icmplt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -922,8 +1435,10 @@ fn handle_if_icmplt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a < b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_icmpge(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -933,8 +1448,10 @@ fn handle_if_icmpge(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a >= b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_icmpgt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -944,8 +1461,10 @@ fn handle_if_icmpgt(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a > b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_icmple(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -955,8 +1474,10 @@ fn handle_if_icmple(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let a = frame.pop()?.as_int();
     if a <= b {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_acmpeq(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -964,12 +1485,13 @@ fn handle_if_acmpeq(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
     let b = frame.pop()?;
     let a = frame.pop()?;
-    if a.is_null() && b.is_null() {
+    let branch_taken = (a.is_null() && b.is_null()) || (!a.is_null() && !b.is_null() && a.as_ref() == b.as_ref());
+    if branch_taken {
         frame.pc = (frame.pc as i32 + offset) as usize;
-    } else if !a.is_null() && !b.is_null() && a.as_ref() == b.as_ref() {
-        frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_if_acmpne(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -977,45 +1499,48 @@ fn handle_if_acmpne(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
     let b = frame.pop()?;
     let a = frame.pop()?;
-    if !((a.is_null() && b.is_null()) || (!a.is_null() && !b.is_null() && a.as_ref() == b.as_ref())) {
+    let branch_taken = !((a.is_null() && b.is_null()) || (!a.is_null() && !b.is_null() && a.as_ref() == b.as_ref()));
+    if branch_taken {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_goto(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
     let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
     frame.pc = (frame.pc as i32 + offset) as usize;
-    Ok(3)
+    Ok(0)
 }
 
 fn handle_ireturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+    frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
     Ok(1)
 }
 
 fn handle_lreturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+    frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
     Ok(1)
 }
 
 fn handle_freturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+    frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
     Ok(1)
 }
 
 fn handle_dreturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+    frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
     Ok(1)
 }
 
 fn handle_areturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+    frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
     Ok(1)
 }
@@ -1038,7 +1563,18 @@ fn handle_getstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     if let Some(val) = target_class.static_fields.get(&format!("{}:{}", field_name, descriptor)) {
         frame.push(val.clone())?;
     } else {
-        frame.push(Value::Null)?;
+        let default_val = match descriptor.as_str() {
+            "I" => Value::Int(0),
+            "J" => Value::Long(0),
+            "F" => Value::Float(0.0),
+            "D" => Value::Double(0.0),
+            "Z" => Value::Boolean(false),
+            "B" => Value::Byte(0),
+            "S" => Value::Short(0),
+            "C" => Value::Char(0),
+            _ => Value::Null,
+        };
+        frame.push(default_val)?;
     }
     
     Ok(3)
@@ -1126,6 +1662,10 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     args.reverse();
     let this_ref = frame.pop()?;
     
+    if !method.is_static && this_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
     let mut new_frame = Frame::new(method.clone());
     if !method.is_static {
         new_frame.set_local(0, this_ref)?;
@@ -1138,9 +1678,11 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         }
     }
     
+    frame.pc += 3;
+    jvm.stack.push(frame.clone())?;
     jvm.stack.push(new_frame)?;
     
-    Ok(3)
+    Ok(0)
 }
 
 fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
@@ -1167,9 +1709,11 @@ fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         new_frame.set_local(0, this_ref)?;
     }
     
+    frame.pc += 3;
+    jvm.stack.push(frame.clone())?;
     jvm.stack.push(new_frame)?;
     
-    Ok(3)
+    Ok(0)
 }
 
 fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
@@ -1186,14 +1730,22 @@ fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         .ok_or(RuntimeError::MethodNotFound(class_name, method_name.clone()))?;
     
     let arg_count = parse_method_descriptor(&descriptor).0;
+    let mut args = Vec::with_capacity(arg_count);
     for _ in 0..arg_count {
-        frame.pop()?;
+        args.push(frame.pop()?);
     }
+    args.reverse();
     
     let mut new_frame = Frame::new(method.clone());
+    for (i, arg) in args.into_iter().enumerate() {
+        new_frame.set_local(i, arg)?;
+    }
+    
+    frame.pc += 3;
+    jvm.stack.push(frame.clone())?;
     jvm.stack.push(new_frame)?;
     
-    Ok(3)
+    Ok(0)
 }
 
 fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
@@ -1204,10 +1756,11 @@ fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let class_name = class.class_file.constant_pool.get_class_name(index)
         .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
-    let target_class = jvm.method_area.get_class(&class_name)
-        .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
+    let class_name_dotted = class_name.replace('/', ".");
+    let target_class = jvm.method_area.get_class(&class_name_dotted)
+        .ok_or(RuntimeError::NoSuchClass(class_name_dotted.clone()))?;
     
-    let mut obj = HeapObject::new(class_name.clone());
+    let mut obj = HeapObject::new(class_name_dotted.clone());
     for field_key in &target_class.instance_fields {
         obj.fields.insert(field_key.clone(), Value::Null);
     }
@@ -1220,14 +1773,26 @@ fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
 
 fn handle_newarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
-    let _atype = code[frame.pc + 1];
+    let atype = code[frame.pc + 1];
     let length = frame.pop()?.as_int() as usize;
     
     if length < 0 {
         return Err(RuntimeError(RuntimeError::NegativeArraySize));
     }
     
-    let obj = HeapObject::new_array("[[I".to_string(), length);
+    let class_name = match atype {
+        4 => "[Z".to_string(),
+        5 => "[C".to_string(),
+        6 => "[F".to_string(),
+        7 => "[D".to_string(),
+        8 => "[B".to_string(),
+        9 => "[S".to_string(),
+        10 => "[I".to_string(),
+        11 => "[J".to_string(),
+        _ => "[I".to_string(),
+    };
+    
+    let obj = HeapObject::new_array(class_name, length);
     let ref_id = jvm.heap.allocate(obj)?;
     frame.push(Value::ArrayRef(ref_id))?;
     
@@ -1248,7 +1813,7 @@ fn handle_anewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         return Err(RuntimeError(RuntimeError::NegativeArraySize));
     }
     
-    let obj = HeapObject::new_array(format!("[L{};", class_name), length);
+    let obj = HeapObject::new_array(format!("[L{};", class_name.replace('/', ".")), length);
     let ref_id = jvm.heap.allocate(obj)?;
     frame.push(Value::ArrayRef(ref_id))?;
     
@@ -1269,30 +1834,205 @@ fn handle_arraylength(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     Ok(1)
 }
 
+fn handle_aaload(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let element = obj.get_array_element(index)?.clone();
+    frame.push(element)?;
+    
+    Ok(1)
+}
+
+fn handle_aastore(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let value = frame.pop()?;
+    let index = frame.pop()?.as_int() as usize;
+    let arr_ref = frame.pop()?;
+    
+    if arr_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj = jvm.heap.get_mut(arr_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    obj.set_array_element(index, value)?;
+    
+    Ok(1)
+}
+
 fn handle_athrow(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
-    frame.pc = frame.method.code.len();
+    let exception = frame.pop()?;
+    if exception.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    frame.exception = Some(exception);
     Ok(1)
 }
 
-fn handle_checkcast(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
+fn handle_checkcast(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    
+    let obj_ref = frame.pop()?;
+    
+    if obj_ref.is_null() {
+        frame.push(Value::Null)?;
+        return Ok(3);
+    }
+    
+    let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
+    let target_class_name = class.class_file.constant_pool.get_class_name(index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
+    
+    let obj = jvm.heap.get(obj_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    if is_assignable_from(&obj.class_name, &target_class_name.replace('/', ".")) {
+        frame.push(obj_ref)?;
+    } else {
+        return Err(RuntimeError(RuntimeError::ClassCastException));
+    }
+    
     Ok(3)
 }
 
-fn handle_instanceof(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    frame.pop()?;
-    frame.pop()?;
-    frame.push(Value::Int(0))?;
+fn handle_instanceof(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    
+    let obj_ref = frame.pop()?;
+    
+    if obj_ref.is_null() {
+        frame.push(Value::Int(0))?;
+        return Ok(3);
+    }
+    
+    let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
+    let target_class_name = class.class_file.constant_pool.get_class_name(index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
+    
+    let obj = jvm.heap.get(obj_ref.as_ref())
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    
+    let result = if is_assignable_from(&obj.class_name, &target_class_name.replace('/', ".")) {
+        1
+    } else {
+        0
+    };
+    
+    frame.push(Value::Int(result))?;
+    
     Ok(3)
 }
 
-fn handle_monitorenter(_frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    Ok(1)
+fn is_assignable_from(obj_class: &str, target_class: &str) -> bool {
+    if obj_class == target_class {
+        return true;
+    }
+    
+    let obj_class = obj_class.strip_prefix("[L").and_then(|s| s.strip_suffix(';')).unwrap_or(obj_class);
+    let target_class = target_class.strip_prefix("[L").and_then(|s| s.strip_suffix(';')).unwrap_or(target_class);
+    
+    let superclasses = get_superclasses(obj_class);
+    superclasses.contains(&target_class.to_string())
 }
 
-fn handle_monitorexit(_frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
-    Ok(1)
+fn get_superclasses(class_name: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    
+    match class_name {
+        "java.lang.String" => {
+            result.push("java.lang.Object".to_string());
+        }
+        "java.lang.Integer" | "java.lang.Long" | "java.lang.Float" | "java.lang.Double" |
+        "java.lang.Boolean" | "java.lang.Character" | "java.lang.Byte" | "java.lang.Short" => {
+            result.push("java.lang.Number".to_string());
+            result.push("java.lang.Object".to_string());
+        }
+        "java.lang.Exception" | "java.lang.RuntimeException" => {
+            result.push("java.lang.Throwable".to_string());
+            result.push("java.lang.Object".to_string());
+        }
+        "java.lang.Error" => {
+            result.push("java.lang.Throwable".to_string());
+            result.push("java.lang.Object".to_string());
+        }
+        "java.io.PrintStream" => {
+            result.push("java.io.FilterOutputStream".to_string());
+            result.push("java.io.OutputStream".to_string());
+            result.push("java.lang.Object".to_string());
+        }
+        _ => {
+            result.push("java.lang.Object".to_string());
+        }
+    }
+    
+    result
+}
+
+fn handle_monitorenter(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let obj_ref = frame.pop()?;
+    
+    match obj_ref {
+        Value::ObjectRef(obj_id) => {
+            if let Some(obj) = jvm.heap.get_mut(obj_id) {
+                let current_thread_id = 1;
+                
+                match obj.monitor_owner {
+                    None => {
+                        obj.monitor_owner = Some(current_thread_id);
+                        obj.monitor_count = 1;
+                    }
+                    Some(owner) if owner == current_thread_id => {
+                        obj.monitor_count += 1;
+                    }
+                    Some(_) => {
+                        return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
+                    }
+                }
+                Ok(1)
+            } else {
+                Err(JvmError::RuntimeError(RuntimeError::NullPointerException))
+            }
+        }
+        _ => Err(JvmError::RuntimeError(RuntimeError::NullPointerException)),
+    }
+}
+
+fn handle_monitorexit(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let obj_ref = frame.pop()?;
+    
+    match obj_ref {
+        Value::ObjectRef(obj_id) => {
+            if let Some(obj) = jvm.heap.get_mut(obj_id) {
+                let current_thread_id = 1;
+                
+                match obj.monitor_owner {
+                    Some(owner) if owner == current_thread_id => {
+                        obj.monitor_count -= 1;
+                        if obj.monitor_count == 0 {
+                            obj.monitor_owner = None;
+                        }
+                        Ok(1)
+                    }
+                    _ => {
+                        return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
+                    }
+                }
+            } else {
+                Err(JvmError::RuntimeError(RuntimeError::NullPointerException))
+            }
+        }
+        _ => Err(JvmError::RuntimeError(RuntimeError::NullPointerException)),
+    }
 }
 
 fn handle_multianewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
@@ -1322,8 +2062,10 @@ fn handle_ifnull(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let ref_val = frame.pop()?;
     if ref_val.is_null() {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 fn handle_ifnonnull(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
@@ -1332,8 +2074,10 @@ fn handle_ifnonnull(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     let ref_val = frame.pop()?;
     if !ref_val.is_null() {
         frame.pc = (frame.pc as i32 + offset) as usize;
+        Ok(0)
+    } else {
+        Ok(3)
     }
-    Ok(3)
 }
 
 pub fn parse_method_descriptor(descriptor: &str) -> (usize, bool) {

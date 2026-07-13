@@ -104,6 +104,9 @@ pub enum RuntimeError {
     #[error("Class cast error")]
     ClassCastError,
     
+    #[error("Class cast exception")]
+    ClassCastException,
+    
     #[error("Arithmetic exception")]
     ArithmeticException,
     

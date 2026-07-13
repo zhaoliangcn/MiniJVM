@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::io::Write;
 use crate::runtime::{JVM, Frame, Value, method_area::{Method, NativeImplementation}};
 
 pub struct InputStream;
@@ -68,6 +69,10 @@ impl OutputStream {
 pub struct PrintStream;
 
 impl PrintStream {
+    fn flush_stdout() {
+        std::io::stdout().flush().ok();
+    }
+
     pub fn print_bool() -> Method {
         Method::new_native("java.io.PrintStream".to_string(), "print".to_string(), "(Z)V".to_string(), false, None)
     }
@@ -103,6 +108,7 @@ impl PrintStream {
                 if let Some(obj) = _jvm.heap.get(*ref_id) {
                     if let Some(str_val) = &obj.string_value {
                         print!("{}", str_val);
+                        Self::flush_stdout();
                     }
                 }
             }
@@ -149,7 +155,8 @@ impl PrintStream {
             if let Value::ObjectRef(ref_id) = s {
                 if let Some(obj) = _jvm.heap.get(*ref_id) {
                     if let Some(str_val) = &obj.string_value {
-                        println!("{}", str_val);
+                        print!("{}\n", str_val);
+                        Self::flush_stdout();
                     }
                 }
             }
@@ -164,7 +171,8 @@ impl PrintStream {
 
     pub fn println() -> Method {
         let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| {
-            println!();
+            print!("\n");
+            Self::flush_stdout();
             Ok(())
         });
         Method::new_native("java.io.PrintStream".to_string(), "println".to_string(), "()V".to_string(), false, Some(native_impl))

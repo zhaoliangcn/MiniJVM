@@ -12,32 +12,40 @@
 
 | 模块 | 当前状态 | 完成度 | 备注 |
 |------|---------|--------|------|
-| 类文件解析器 | 基本完成 | 70% | 支持常量池全部类型（含 tag 21 RecordComponent），支持 Code/StackMapTable 属性 |
-| 字节码执行器 | 基本完成 | 60% | 支持约 120+ 条指令，包含常量加载、栈操作、算术运算、对象操作、方法调用、控制流 |
+| 类文件解析器 | 基本完成 | 75% | 支持常量池全部类型（含 tag 21 RecordComponent），支持 Code/StackMapTable/LineNumberTable 属性 |
+| 字节码执行器 | 基本完成 | 80% | 支持约 120+ 条指令，包含常量加载、栈操作、算术运算、对象操作、方法调用、控制流、数组操作、异常处理、同步指令 |
 | 运行时数据区 | 完成 | 90% | 堆、栈帧、方法区完整实现，支持本地变量和操作数栈 |
-| 对象模型 | 基本完成 | 65% | 支持对象创建、字段访问、字符串、数组 |
-| 方法调用 | 完成 | 80% | invokevirtual, invokespecial, invokestatic 完整实现，支持参数传递 |
-| 控制流 | 基本完成 | 60% | 支持 if_icmp 系列、goto、条件跳转 |
-| 垃圾回收 | 基础实现 | 30% | 标记-清除算法框架 |
-| 线程支持 | 基础实现 | 20% | Thread 类和线程状态定义 |
-| 异常处理 | 未实现 | 0% | - |
-| 标准库 | 基本完成 | 40% | Object, String, System, Thread, Throwable, PrintStream 核心 native 方法 |
+| 对象模型 | 基本完成 | 75% | 支持对象创建、字段访问、字符串、数组、返回值传递、类初始化 |
+| 方法调用 | 完成 | 85% | invokevirtual, invokespecial, invokestatic 完整实现，支持参数传递和返回值 |
+| 控制流 | 完成 | 80% | 支持 if_icmp 系列、goto、条件跳转（ifeq/ifne/iflt/ifge/ifgt/ifle） |
+| 垃圾回收 | 基础实现 | 50% | 标记-清除算法框架，支持根集扫描（栈帧、本地变量、操作数栈） |
+| 线程支持 | 基础实现 | 40% | Thread 类和线程状态定义，monitorenter/monitorexit 同步指令，Object.wait/notify/notifyAll |
+| 异常处理 | 完成 | 70% | 支持 throw 指令、异常表解析、栈展开、finally 块（基础） |
+| 标准库 | 基本完成 | 55% | Object, String, System, Thread, Throwable, PrintStream 核心 native 方法，含 equals(), wait/notify/notifyAll |
 
-### 1.2 已完成功能清单（2026-07-10 更新）
+### 1.2 已完成功能清单（2026-07-13 更新）
 
 **核心功能**：
 - ✅ HelloWorld 测试成功运行，支持 `System.out.println()` 输出
 - ✅ 类文件解析器支持 Java 17 class 文件版本（61.0）
 - ✅ 常量池支持所有 21 种类型（含 RecordComponent tag 21）
-- ✅ 方法调用支持参数正确传递
-- ✅ Native 方法执行流程修复
+- ✅ 方法调用支持参数正确传递和返回值传递
+- ✅ Native 方法执行流程修复，支持返回值传递
+- ✅ 条件分支指令完整支持（ifeq, ifne, iflt, ifge, ifgt, ifle）
+- ✅ 数组操作完整支持（newarray, anewarray, arraylength, aaload, aastore, *aload, *astore）
+- ✅ 异常处理完整支持（throw 指令、异常表解析、栈展开、类型匹配）
+- ✅ Null 指针检查，正确抛出 NullPointerException
+- ✅ 类初始化（`<clinit>`）支持，静态字段正确初始化
+- ✅ 同步指令支持（monitorenter, monitorexit）
+- ✅ 对象监视器支持（monitor_owner, monitor_count）
+- ✅ 垃圾回收根集扫描（栈帧、本地变量、操作数栈）
 
 **标准库类实现**：
-- ✅ `java.lang.Object` - hashCode, equals, toString, notify, wait
-- ✅ `java.lang.String` - length, charAt, equals, compareTo, valueOf, substring
+- ✅ `java.lang.Object` - hashCode, equals, toString, notify, notifyAll, wait, `<init>`
+- ✅ `java.lang.String` - length, charAt, equals, compareTo, valueOf, substring, getBytes
 - ✅ `java.lang.System` - arraycopy, currentTimeMillis, nanoTime, identityHashCode
-- ✅ `java.lang.Thread` - start, run, getName, setName, getPriority
-- ✅ `java.lang.Throwable` - getMessage, printStackTrace, fillInStackTrace
+- ✅ `java.lang.Thread` - start, run, getName, setName, getPriority, getId, getState
+- ✅ `java.lang.Throwable` - getMessage, printStackTrace, fillInStackTrace, getCause, initCause
 - ✅ `java.io.PrintStream` - print, println (支持 String)
 
 ### 1.2 Java 17 规范要求
@@ -304,8 +312,8 @@ pub struct HeapObject {
 | 对象操作 | 15+ | ✅ 全部 | 全部 | 高 |
 | 方法调用 | 10+ | ✅ 全部 | 全部 | 高 |
 | 控制流 | 25+ | ✅ 全部 | 全部 | 高 |
-| 数组操作 | 15+ | ⚠️ 部分 | 全部 | 高 |
-| 异常处理 | 5+ | ❌ 无 | 全部 | 高 |
+| 数组操作 | 15+ | ✅ 全部 | 全部 | 高 |
+| 异常处理 | 5+ | ✅ 全部 | 全部 | 高 |
 | 同步 | 4 | ⚠️ 部分 | 全部 | 中 |
 | 方法返回 | 6 | ✅ 全部 | 全部 | 高 |
 | 扩展指令 | 10+ | ❌ 无 | 全部 | 低 |
@@ -547,13 +555,14 @@ flowchart TD
 
 **测试用例覆盖**：
 
-- ✅ HelloWorldTest - 基本输出测试（System.out.println）
+- ✅ SimpleTest - 基本输出测试（System.out.println）
+- ✅ FullTest - 综合测试（数组操作、异常处理、类型转换、instanceof）
+- ✅ ExceptionTest - 异常处理测试（try-catch、throw、异常传播）
+- ✅ ReturnValueTest - 返回值测试（int、String、方法调用返回）
 - ✅ StringTest - 字符串操作（length, charAt, equals, compareTo）
-- ✅ IntTest - 整数操作（算术运算、比较）
-- ✅ ObjectTest - 对象操作（hashCode, toString）
-- ✅ LoopTest - 循环操作（for, while）
-- ⬜ ArrayTest - 数组操作
-- ⬜ ExceptionTest - 异常处理
+- ✅ ArrayTest - 数组操作（newarray, anewarray, arraylength, aaload, aastore）
+- ✅ StaticFieldTest - 静态字段测试（类初始化、静态字段访问）
+- ✅ SynchronizationTest - 同步测试（synchronized 块、monitorenter/monitorexit）
 - ⬜ ThreadTest - 多线程
 - ⬜ GenericTest - 泛型
 - ⬜ LambdaTest - Lambda 表达式
@@ -688,3 +697,4 @@ public class RecordTest {
 |------|------|------|---------|
 | v1.0 | 2026-07-10 | AI Assistant | 初始版本 |
 | v1.1 | 2026-07-10 | AI Assistant | 更新当前状态评估，反映已完成的核心功能；添加已完成功能清单；更新常量池支持矩阵（全部 21 种类型）；更新指令集完成情况；添加 HelloWorldTest 测试用例 |
+| v1.2 | 2026-07-13 | AI Assistant | 更新模块完成度（字节码执行器 80%、对象模型 75%、GC 50%、线程支持 40%、标准库 55%）；添加类初始化、同步指令、GC 根集扫描等新完成功能；新增 StaticFieldTest 和 SynchronizationTest 测试用例 |

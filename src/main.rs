@@ -39,9 +39,7 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     
     let mut jvm = JVM::new();
     
-    stdlib::lang::Object::register(&mut jvm);
-    stdlib::lang::String::register(&mut jvm);
-    stdlib::lang::System::register(&mut jvm);
+    stdlib::lang::register_standard_classes(&mut jvm);
     stdlib::io::PrintStream::register(&mut jvm);
     
     let print_stream_obj = minijvm_lib::runtime::heap::HeapObject::new("java.io.PrintStream".to_string());
@@ -51,6 +49,13 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     
     let class = minijvm_lib::runtime::method_area::Class::new(class_file)?;
     jvm.method_area.add_class(class);
+    
+    if let Some(clinit_method) = jvm.method_area.get_method(&class_name, "<clinit>", "()V") {
+        let clinit_frame = Frame::new(clinit_method.clone());
+        jvm.stack.push(clinit_frame)?;
+        let interpreter = Interpreter::new();
+        interpreter.run(&mut jvm)?;
+    }
     
     let main_method = jvm.method_area.get_method(&class_name, "main", "([Ljava/lang/String;)V")
         .ok_or(JvmError::RuntimeError(minijvm_lib::error::RuntimeError::MethodNotFound(class_name.clone(), "main".to_string())))?;

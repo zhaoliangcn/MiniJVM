@@ -53,30 +53,108 @@ impl Object {
     }
 
     pub fn notify() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "notify".to_string(), "()V".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = &this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*obj_id) {
+                    let current_thread_id = 1;
+                    if obj.monitor_owner != Some(current_thread_id) {
+                        return Err(crate::error::JvmError::ThreadingError(
+                            crate::error::ThreadingError::IllegalMonitorState
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "notify".to_string(), "()V".to_string(), false, Some(native_impl))
     }
 
     pub fn notifyAll() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "notifyAll".to_string(), "()V".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = &this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*obj_id) {
+                    let current_thread_id = 1;
+                    if obj.monitor_owner != Some(current_thread_id) {
+                        return Err(crate::error::JvmError::ThreadingError(
+                            crate::error::ThreadingError::IllegalMonitorState
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "notifyAll".to_string(), "()V".to_string(), false, Some(native_impl))
     }
 
     pub fn wait() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "()V".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = &this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*obj_id) {
+                    let current_thread_id = 1;
+                    if obj.monitor_owner != Some(current_thread_id) {
+                        return Err(crate::error::JvmError::ThreadingError(
+                            crate::error::ThreadingError::IllegalMonitorState
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "()V".to_string(), false, Some(native_impl))
     }
 
     pub fn wait_timeout() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "(J)V".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = &this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*obj_id) {
+                    let current_thread_id = 1;
+                    if obj.monitor_owner != Some(current_thread_id) {
+                        return Err(crate::error::JvmError::ThreadingError(
+                            crate::error::ThreadingError::IllegalMonitorState
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "(J)V".to_string(), false, Some(native_impl))
     }
 
     pub fn wait_nanos() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "(JI)V".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = &this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*obj_id) {
+                    let current_thread_id = 1;
+                    if obj.monitor_owner != Some(current_thread_id) {
+                        return Err(crate::error::JvmError::ThreadingError(
+                            crate::error::ThreadingError::IllegalMonitorState
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "wait".to_string(), "(JI)V".to_string(), false, Some(native_impl))
     }
 
     pub fn finalize() -> Method {
         Method::new_native("java.lang.Object".to_string(), "finalize".to_string(), "()V".to_string(), false, None)
     }
 
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| {
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
     pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Object", Object::init());
         jvm.method_area.add_native_method("java.lang.Object", Object::get_class());
         jvm.method_area.add_native_method("java.lang.Object", Object::hashCode());
         jvm.method_area.add_native_method("java.lang.Object", Object::equals());
@@ -123,9 +201,9 @@ impl String {
 
     pub fn equals() -> Method {
         let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
-            let other = frame.pop()?;
+            let other = frame.get_local(1)?;
             let this_ref = frame.get_local(0)?;
-            if let (Value::ObjectRef(ref this_id), Value::ObjectRef(ref other_id)) = (this_ref, other) {
+            if let (Value::ObjectRef(this_id), Value::ObjectRef(other_id)) = (this_ref, other) {
                 if let (Some(this_obj), Some(other_obj)) = (jvm.heap.get(*this_id), jvm.heap.get(*other_id)) {
                     if let (Some(this_str), Some(other_str)) = (&this_obj.string_value, &other_obj.string_value) {
                         frame.push(Value::Boolean(this_str == other_str))?;
@@ -285,6 +363,7 @@ impl String {
         jvm.method_area.add_native_method("java.lang.String", String::charAt());
         jvm.method_area.add_native_method("java.lang.String", String::getBytes());
         jvm.method_area.add_native_method("java.lang.String", String::getBytes_charset());
+        jvm.method_area.add_native_method("java.lang.String", String::equals());
         jvm.method_area.add_native_method("java.lang.String", String::compareTo());
         jvm.method_area.add_native_method("java.lang.String", String::indexOf());
         jvm.method_area.add_native_method("java.lang.String", String::substring());
@@ -441,6 +520,25 @@ impl Thread {
     pub fn isAlive() -> Method {
         Method::new_native("java.lang.Thread".to_string(), "isAlive".to_string(), "()Z".to_string(), false, None)
     }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::start());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::run());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::sleep());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::join());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::r#yield());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::currentThread());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::getName());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::setName());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::getPriority());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::setPriority());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::getId());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::getState());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::interrupt());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::isInterrupted());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::interrupted());
+        jvm.method_area.add_native_method("java.lang.Thread", Thread::isAlive());
+    }
 }
 
 pub struct Throwable;
@@ -476,5 +574,75 @@ impl Throwable {
 
     pub fn initCause() -> Method {
         Method::new_native("java.lang.Throwable".to_string(), "initCause".to_string(), "(Ljava/lang/Throwable;)Ljava/lang/Throwable;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::getMessage());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::getLocalizedMessage());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::toString());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::printStackTrace());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::fillInStackTrace());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::getCause());
+        jvm.method_area.add_native_method("java.lang.Throwable", Throwable::initCause());
+    }
+}
+
+pub fn register_standard_classes(jvm: &mut JVM) {
+    Object::register(jvm);
+    String::register(jvm);
+    System::register(jvm);
+    Thread::register(jvm);
+    Throwable::register(jvm);
+    
+    let exception_classes = vec![
+        "java.lang.Exception",
+        "java.lang.RuntimeException",
+        "java.lang.NullPointerException",
+        "java.lang.ArrayIndexOutOfBoundsException",
+        "java.lang.ClassCastException",
+        "java.lang.IllegalArgumentException",
+        "java.lang.NegativeArraySizeException",
+    ];
+    
+    for class_name in exception_classes {
+        let class_name_clone = class_name.to_string();
+        let init_method = Method::new_native(
+            class_name_clone.clone(), 
+            "<init>".to_string(), 
+            "()V".to_string(), 
+            false, 
+            None
+        );
+        jvm.method_area.add_native_method(class_name, init_method);
+        
+        let init_with_message_impl: NativeImplementation = Arc::new(move |frame, jvm| {
+            let msg_ref = frame.get_local(1)?;
+            let msg_str = if let Value::ObjectRef(msg_id) = msg_ref {
+                if let Some(msg_obj) = jvm.heap.get(*msg_id) {
+                    msg_obj.string_value.clone()
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value = msg_str;
+                }
+            }
+            Ok(())
+        });
+        
+        let init_with_message = Method::new_native(
+            class_name.to_string(), 
+            "<init>".to_string(), 
+            "(Ljava/lang/String;)V".to_string(), 
+            false, 
+            Some(init_with_message_impl)
+        );
+        jvm.method_area.add_native_method(class_name, init_with_message);
     }
 }

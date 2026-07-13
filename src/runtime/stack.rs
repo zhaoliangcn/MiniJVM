@@ -9,6 +9,8 @@ pub struct Frame {
     pub pc: usize,
     pub local_variables: Vec<Value>,
     pub operand_stack: Vec<Value>,
+    pub exception: Option<Value>,
+    pub return_value: Option<Value>,
 }
 
 impl Frame {
@@ -19,6 +21,8 @@ impl Frame {
             pc: 0,
             local_variables: vec![Value::Null; max_locals],
             operand_stack: Vec::new(),
+            exception: None,
+            return_value: None,
         }
     }
 
@@ -178,5 +182,9 @@ impl JvmStack {
 
     pub fn is_empty(&self) -> bool {
         self.frames.is_empty()
+    }
+
+    pub fn get_frames(&self) -> &[Frame] {
+        &self.frames
     }
 }

@@ -9,6 +9,8 @@ pub struct HeapObject {
     pub string_value: Option<String>,
     pub array_elements: Option<Vec<Value>>,
     pub array_length: usize,
+    pub monitor_owner: Option<usize>,
+    pub monitor_count: usize,
 }
 
 impl HeapObject {
@@ -19,6 +21,8 @@ impl HeapObject {
             string_value: None,
             array_elements: None,
             array_length: 0,
+            monitor_owner: None,
+            monitor_count: 0,
         }
     }
 
@@ -29,6 +33,8 @@ impl HeapObject {
             string_value: Some(value),
             array_elements: None,
             array_length: 0,
+            monitor_owner: None,
+            monitor_count: 0,
         }
     }
 
@@ -39,6 +45,8 @@ impl HeapObject {
             string_value: None,
             array_elements: Some(vec![Value::Null; length]),
             array_length: length,
+            monitor_owner: None,
+            monitor_count: 0,
         }
     }
 

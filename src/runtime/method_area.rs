@@ -169,6 +169,10 @@ impl Class {
     pub fn get_field(&self, name: &str, descriptor: &str) -> Option<&Field> {
         self.fields.get(&format!("{}:{}", name, descriptor))
     }
+
+    pub fn get_code_attribute(&self, name: &str, descriptor: &str) -> Option<&CodeAttribute> {
+        self.class_file.get_method(name, descriptor)?.get_code_attribute()
+    }
 }
 
 #[derive(Debug, Clone)]

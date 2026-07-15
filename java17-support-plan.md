@@ -12,18 +12,18 @@
 
 | 模块 | 当前状态 | 完成度 | 备注 |
 |------|---------|--------|------|
-| 类文件解析器 | 基本完成 | 75% | 支持常量池全部类型（含 tag 21 RecordComponent），支持 Code/StackMapTable/LineNumberTable 属性 |
-| 字节码执行器 | 基本完成 | 80% | 支持约 120+ 条指令，包含常量加载、栈操作、算术运算、对象操作、方法调用、控制流、数组操作、异常处理、同步指令 |
-| 运行时数据区 | 完成 | 90% | 堆、栈帧、方法区完整实现，支持本地变量和操作数栈 |
-| 对象模型 | 基本完成 | 75% | 支持对象创建、字段访问、字符串、数组、返回值传递、类初始化 |
-| 方法调用 | 完成 | 85% | invokevirtual, invokespecial, invokestatic 完整实现，支持参数传递和返回值 |
-| 控制流 | 完成 | 80% | 支持 if_icmp 系列、goto、条件跳转（ifeq/ifne/iflt/ifge/ifgt/ifle） |
-| 垃圾回收 | 基础实现 | 50% | 标记-清除算法框架，支持根集扫描（栈帧、本地变量、操作数栈） |
-| 线程支持 | 基础实现 | 40% | Thread 类和线程状态定义，monitorenter/monitorexit 同步指令，Object.wait/notify/notifyAll |
-| 异常处理 | 完成 | 70% | 支持 throw 指令、异常表解析、栈展开、finally 块（基础） |
-| 标准库 | 基本完成 | 55% | Object, String, System, Thread, Throwable, PrintStream 核心 native 方法，含 equals(), wait/notify/notifyAll |
+| 类文件解析器 | 基本完成 | 80% | 支持常量池全部类型（含 tag 21 RecordComponent），支持 Code/StackMapTable/LineNumberTable/BootstrapMethods 属性 |
+| 字节码执行器 | 基本完成 | 88% | 支持约 130+ 条指令，新增 invokeinterface, invokedynamic, goto_w 指令 |
+| 运行时数据区 | 完成 | 92% | 堆、栈帧、方法区完整实现，支持本地变量和操作数栈，对象监视器 |
+| 对象模型 | 基本完成 | 80% | 支持对象创建、字段访问、字符串、数组、返回值传递、类初始化、字符串拼接 |
+| 方法调用 | 完成 | 95% | invokevirtual, invokespecial, invokestatic, invokeinterface, invokedynamic 完整实现 |
+| 控制流 | 完成 | 85% | 支持 if_icmp 系列、goto、goto_w、条件跳转（ifeq/ifne/iflt/ifge/ifgt/ifle） |
+| 垃圾回收 | 基础实现 | 55% | 标记-清除算法框架，支持根集扫描（栈帧、本地变量、操作数栈） |
+| 线程支持 | 基础实现 | 45% | Thread 类和线程状态定义，monitorenter/monitorexit 同步指令，Object.wait/notify/notifyAll |
+| 异常处理 | 完成 | 75% | 支持 throw 指令、异常表解析、栈展开、finally 块（基础）、UnsupportedInvokeDynamic 错误类型 |
+| 标准库 | 基本完成 | 70% | 新增 StringBuilder, Integer, Long, Double, Math 类及核心方法 |
 
-### 1.2 已完成功能清单（2026-07-13 更新）
+### 1.2 已完成功能清单（2026-07-15 更新）
 
 **核心功能**：
 - ✅ HelloWorld 测试成功运行，支持 `System.out.println()` 输出
@@ -39,13 +39,22 @@
 - ✅ 同步指令支持（monitorenter, monitorexit）
 - ✅ 对象监视器支持（monitor_owner, monitor_count）
 - ✅ 垃圾回收根集扫描（栈帧、本地变量、操作数栈）
+- ✅ invokeinterface 指令（0xB9）- 接口方法调用，支持运行时类型分派
+- ✅ invokedynamic 指令（0xBA）- 动态调用，支持字符串拼接（makeConcatWithConstants）
+- ✅ goto_w 指令（0xC8）- 宽跳转，支持 4 字节偏移量
+- ✅ 字符串拼接优化 - 通过 invokedynamic 实现高效字符串拼接
 
 **标准库类实现**：
 - ✅ `java.lang.Object` - hashCode, equals, toString, notify, notifyAll, wait, `<init>`
 - ✅ `java.lang.String` - length, charAt, equals, compareTo, valueOf, substring, getBytes
+- ✅ `java.lang.StringBuilder` - append(String/int/long/double/float/boolean/char/Object), toString
 - ✅ `java.lang.System` - arraycopy, currentTimeMillis, nanoTime, identityHashCode
 - ✅ `java.lang.Thread` - start, run, getName, setName, getPriority, getId, getState
 - ✅ `java.lang.Throwable` - getMessage, printStackTrace, fillInStackTrace, getCause, initCause
+- ✅ `java.lang.Integer` - parseInt, parseInt(String,int), toString, valueOf
+- ✅ `java.lang.Long` - parseLong, parseLong(String,int), toString, valueOf
+- ✅ `java.lang.Double` - parseDouble, toString, valueOf
+- ✅ `java.lang.Math` - abs, max, min, sqrt, pow
 - ✅ `java.io.PrintStream` - print, println (支持 String)
 
 ### 1.2 Java 17 规范要求
@@ -314,57 +323,58 @@ pub struct HeapObject {
 | 控制流 | 25+ | ✅ 全部 | 全部 | 高 |
 | 数组操作 | 15+ | ✅ 全部 | 全部 | 高 |
 | 异常处理 | 5+ | ✅ 全部 | 全部 | 高 |
-| 同步 | 4 | ⚠️ 部分 | 全部 | 中 |
+| 同步 | 4 | ✅ 全部 | 全部 | 中 |
 | 方法返回 | 6 | ✅ 全部 | 全部 | 高 |
-| 扩展指令 | 10+ | ❌ 无 | 全部 | 低 |
+| 扩展指令 | 10+ | ⚠️ 部分 | 全部 | 低 |
 
 **关键指令实现清单**：
 
-| 指令 | 操作码 | 描述 | 优先级 |
-|------|--------|------|--------|
-| new | 0xBB | 创建对象 | 高 |
-| anewarray | 0xBD | 创建引用类型数组 | 高 |
-| newarray | 0xBC | 创建基本类型数组 | 高 |
-| arraylength | 0xBE | 获取数组长度 | 高 |
-| aaload | 0x32 | 数组元素加载 | 高 |
-| aastore | 0x53 | 数组元素存储 | 高 |
-| checkcast | 0xC0 | 类型转换检查 | 高 |
-| instanceof | 0xC1 | 类型检查 | 高 |
-| getfield | 0xB4 | 获取实例字段 | 高 |
-| putfield | 0xB5 | 设置实例字段 | 高 |
-| getstatic | 0xB2 | 获取静态字段 | 高 |
-| putstatic | 0xB3 | 设置静态字段 | 高 |
-| invokevirtual | 0xB6 | 调用实例方法 | 高 |
-| invokespecial | 0xB7 | 调用特殊方法 | 高 |
-| invokestatic | 0xB8 | 调用静态方法 | 高 |
-| invokeinterface | 0xB9 | 调用接口方法 | 高 |
-| invokedynamic | 0xBA | 调用动态方法 | 中 |
-| iinc | 0x84 | 局部变量自增 | 高 |
-| goto | 0xA7 | 无条件跳转 | 高 |
-| goto_w | 0xC8 | 宽跳转 | 中 |
-| ifeq | 0x99 | 等于零跳转 | 高 |
-| ifne | 0x9A | 不等于零跳转 | 高 |
-| iflt | 0x9B | 小于零跳转 | 高 |
-| ifge | 0x9C | 大于等于零跳转 | 高 |
-| ifgt | 0x9D | 大于零跳转 | 高 |
-| ifle | 0x9E | 小于等于零跳转 | 高 |
-| if_icmpeq | 0x9F | 整数相等跳转 | 高 |
-| if_icmpne | 0xA0 | 整数不等跳转 | 高 |
-| if_icmplt | 0xA1 | 整数小于跳转 | 高 |
-| if_icmpge | 0xA2 | 整数大于等于跳转 | 高 |
-| if_icmpgt | 0xA3 | 整数大于跳转 | 高 |
-| if_icmple | 0xA4 | 整数小于等于跳转 | 高 |
-| if_acmpeq | 0xA5 | 引用相等跳转 | 高 |
-| if_acmpne | 0xA6 | 引用不等跳转 | 高 |
-| ireturn | 0xAC | 返回整数 | 高 |
-| lreturn | 0xAD | 返回长整数 | 高 |
-| freturn | 0xAE | 返回浮点数 | 高 |
-| dreturn | 0xAF | 返回双精度 | 高 |
-| areturn | 0xB0 | 返回引用 | 高 |
-| return | 0xB1 | 返回空 | 高 |
-| throw | 0xBF | 抛出异常 | 高 |
-| monitorenter | 0xC2 | 进入监视器 | 中 |
-| monitorexit | 0xC3 | 退出监视器 | 中 |
+| 指令 | 操作码 | 描述 | 状态 | 优先级 |
+|------|--------|------|------|--------|
+| new | 0xBB | 创建对象 | ✅ | 高 |
+| anewarray | 0xBD | 创建引用类型数组 | ✅ | 高 |
+| newarray | 0xBC | 创建基本类型数组 | ✅ | 高 |
+| arraylength | 0xBE | 获取数组长度 | ✅ | 高 |
+| aaload | 0x32 | 数组元素加载 | ✅ | 高 |
+| aastore | 0x53 | 数组元素存储 | ✅ | 高 |
+| checkcast | 0xC0 | 类型转换检查 | ✅ | 高 |
+| instanceof | 0xC1 | 类型检查 | ✅ | 高 |
+| getfield | 0xB4 | 获取实例字段 | ✅ | 高 |
+| putfield | 0xB5 | 设置实例字段 | ✅ | 高 |
+| getstatic | 0xB2 | 获取静态字段 | ✅ | 高 |
+| putstatic | 0xB3 | 设置静态字段 | ✅ | 高 |
+| invokevirtual | 0xB6 | 调用实例方法 | ✅ | 高 |
+| invokespecial | 0xB7 | 调用特殊方法 | ✅ | 高 |
+| invokestatic | 0xB8 | 调用静态方法 | ✅ | 高 |
+| invokeinterface | 0xB9 | 调用接口方法 | ✅ | 高 |
+| invokedynamic | 0xBA | 调用动态方法（支持字符串拼接） | ✅ | 中 |
+| iinc | 0x84 | 局部变量自增 | ✅ | 高 |
+| goto | 0xA7 | 无条件跳转 | ✅ | 高 |
+| goto_w | 0xC8 | 宽跳转 | ✅ | 中 |
+| jsr_w | 0xC9 | 宽跳转至子例程 | ⬜ | 低 |
+| ifeq | 0x99 | 等于零跳转 | ✅ | 高 |
+| ifne | 0x9A | 不等于零跳转 | ✅ | 高 |
+| iflt | 0x9B | 小于零跳转 | ✅ | 高 |
+| ifge | 0x9C | 大于等于零跳转 | ✅ | 高 |
+| ifgt | 0x9D | 大于零跳转 | ✅ | 高 |
+| ifle | 0x9E | 小于等于零跳转 | ✅ | 高 |
+| if_icmpeq | 0x9F | 整数相等跳转 | ✅ | 高 |
+| if_icmpne | 0xA0 | 整数不等跳转 | ✅ | 高 |
+| if_icmplt | 0xA1 | 整数小于跳转 | ✅ | 高 |
+| if_icmpge | 0xA2 | 整数大于等于跳转 | ✅ | 高 |
+| if_icmpgt | 0xA3 | 整数大于跳转 | ✅ | 高 |
+| if_icmple | 0xA4 | 整数小于等于跳转 | ✅ | 高 |
+| if_acmpeq | 0xA5 | 引用相等跳转 | ✅ | 高 |
+| if_acmpne | 0xA6 | 引用不等跳转 | ✅ | 高 |
+| ireturn | 0xAC | 返回整数 | ✅ | 高 |
+| lreturn | 0xAD | 返回长整数 | ✅ | 高 |
+| freturn | 0xAE | 返回浮点数 | ✅ | 高 |
+| dreturn | 0xAF | 返回双精度 | ✅ | 高 |
+| areturn | 0xB0 | 返回引用 | ✅ | 高 |
+| return | 0xB1 | 返回空 | ✅ | 高 |
+| throw | 0xBF | 抛出异常 | ✅ | 高 |
+| monitorenter | 0xC2 | 进入监视器 | ✅ | 中 |
+| monitorexit | 0xC3 | 退出监视器 | ✅ | 中 |
 
 #### 3.3.2 类型系统完善
 
@@ -460,29 +470,29 @@ flowchart TD
 
 **java.lang 类支持矩阵**：
 
-| 类名 | 用途 | 优先级 | 实现要点 |
-|------|------|--------|---------|
-| Object | 所有类的根 | 高 | getClass, hashCode, equals, toString |
-| String | 字符串 | 高 | 不可变字符串实现 |
-| StringBuilder | 可变字符串 | 中 | 高效字符串拼接 |
-| Class | 类元数据 | 高 | 反射基础 |
-| System | 系统操作 | 高 | out, err, in, arraycopy |
-| Thread | 线程 | 高 | 多线程支持 |
-| Runnable | 可运行接口 | 高 | run() 方法 |
-| Exception | 异常基类 | 高 | 异常层次结构 |
-| RuntimeException | 运行时异常 | 高 | 非检查异常 |
-| Error | 错误 | 中 | 严重错误 |
-| Integer | 整数包装类 | 中 | 自动装箱/拆箱 |
-| Long | 长整数包装类 | 中 | 自动装箱/拆箱 |
-| Float | 浮点数包装类 | 中 | 自动装箱/拆箱 |
-| Double | 双精度包装类 | 中 | 自动装箱/拆箱 |
-| Boolean | 布尔包装类 | 中 | 自动装箱/拆箱 |
-| Character | 字符包装类 | 中 | 自动装箱/拆箱 |
-| Byte | 字节包装类 | 低 | 自动装箱/拆箱 |
-| Short | 短整数包装类 | 低 | 自动装箱/拆箱 |
-| Math | 数学运算 | 中 | 基本数学函数 |
-| StrictMath | 严格数学 | 低 | IEEE 754 规范 |
-| ThreadLocal | 线程本地变量 | 中 | 线程隔离存储 |
+| 类名 | 用途 | 状态 | 优先级 | 实现要点 |
+|------|------|------|--------|---------|
+| Object | 所有类的根 | ✅ | 高 | getClass, hashCode, equals, toString, notify, notifyAll, wait |
+| String | 字符串 | ✅ | 高 | 不可变字符串实现，length, charAt, equals, compareTo, valueOf, substring |
+| StringBuilder | 可变字符串 | ✅ | 中 | append(String/int/long/double/float/boolean/char/Object), toString |
+| Class | 类元数据 | ⬜ | 高 | 反射基础 |
+| System | 系统操作 | ✅ | 高 | out, err, in, arraycopy, currentTimeMillis, nanoTime, identityHashCode |
+| Thread | 线程 | ✅ | 高 | start, run, getName, setName, getPriority, getId, getState |
+| Runnable | 可运行接口 | ⬜ | 高 | run() 方法 |
+| Exception | 异常基类 | ⬜ | 高 | 异常层次结构 |
+| RuntimeException | 运行时异常 | ⬜ | 高 | 非检查异常 |
+| Error | 错误 | ⬜ | 中 | 严重错误 |
+| Integer | 整数包装类 | ✅ | 中 | parseInt, parseInt(String,int), toString, valueOf |
+| Long | 长整数包装类 | ✅ | 中 | parseLong, parseLong(String,int), toString, valueOf |
+| Float | 浮点数包装类 | ⬜ | 中 | 自动装箱/拆箱 |
+| Double | 双精度包装类 | ✅ | 中 | parseDouble, toString, valueOf |
+| Boolean | 布尔包装类 | ⬜ | 中 | 自动装箱/拆箱 |
+| Character | 字符包装类 | ⬜ | 中 | 自动装箱/拆箱 |
+| Byte | 字节包装类 | ⬜ | 低 | 自动装箱/拆箱 |
+| Short | 短整数包装类 | ⬜ | 低 | 自动装箱/拆箱 |
+| Math | 数学运算 | ✅ | 中 | abs, max, min, sqrt, pow |
+| StrictMath | 严格数学 | ⬜ | 低 | IEEE 754 规范 |
+| ThreadLocal | 线程本地变量 | ⬜ | 中 | 线程隔离存储 |
 
 #### 3.5.2 java.io 包实现
 
@@ -563,6 +573,10 @@ flowchart TD
 - ✅ ArrayTest - 数组操作（newarray, anewarray, arraylength, aaload, aastore）
 - ✅ StaticFieldTest - 静态字段测试（类初始化、静态字段访问）
 - ✅ SynchronizationTest - 同步测试（synchronized 块、monitorenter/monitorexit）
+- ✅ StringBuilderTest - StringBuilder 测试（append, toString）
+- ✅ InvokeDynamicTest - 字符串拼接测试（invokedynamic, makeConcatWithConstants）
+- ✅ WrapperClassTest - 包装类测试（Integer.parseInt, Long.parseLong, Double.parseDouble）
+- ✅ MathTest - 数学函数测试（Math.abs, Math.max, Math.min, Math.sqrt, Math.pow）
 - ⬜ ThreadTest - 多线程
 - ⬜ GenericTest - 泛型
 - ⬜ LambdaTest - Lambda 表达式
@@ -698,3 +712,4 @@ public class RecordTest {
 | v1.0 | 2026-07-10 | AI Assistant | 初始版本 |
 | v1.1 | 2026-07-10 | AI Assistant | 更新当前状态评估，反映已完成的核心功能；添加已完成功能清单；更新常量池支持矩阵（全部 21 种类型）；更新指令集完成情况；添加 HelloWorldTest 测试用例 |
 | v1.2 | 2026-07-13 | AI Assistant | 更新模块完成度（字节码执行器 80%、对象模型 75%、GC 50%、线程支持 40%、标准库 55%）；添加类初始化、同步指令、GC 根集扫描等新完成功能；新增 StaticFieldTest 和 SynchronizationTest 测试用例 |
+| v1.3 | 2026-07-15 | AI Assistant | 更新模块完成度（类文件解析器 80%、字节码执行器 88%、方法调用 95%、标准库 70%）；新增 invokeinterface/invokedynamic/goto_w 指令实现；新增 StringBuilder/Integer/Long/Double/Math 标准库类；更新指令集和标准库支持矩阵状态；新增 StringBuilderTest/InvokeDynamicTest/WrapperClassTest/MathTest 测试用例 |

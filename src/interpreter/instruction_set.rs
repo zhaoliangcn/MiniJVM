@@ -182,6 +182,9 @@ impl InstructionSet {
         handlers.insert(0xB6, handle_invokevirtual);
         handlers.insert(0xB7, handle_invokespecial);
         handlers.insert(0xB8, handle_invokestatic);
+        handlers.insert(0xB9, handle_invokeinterface);
+        handlers.insert(0xBA, handle_invokedynamic);
+        handlers.insert(0xC8, handle_goto_w);
         handlers.insert(0xBB, handle_new);
         handlers.insert(0xBC, handle_newarray);
         handlers.insert(0xBD, handle_anewarray);
@@ -1654,9 +1657,9 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let method = target_class.get_method(&method_name, &descriptor)
         .ok_or(RuntimeError::MethodNotFound(class_name, method_name.clone()))?;
     
-    let arg_count = parse_method_descriptor(&descriptor).0;
-    let mut args = Vec::with_capacity(arg_count);
-    for _ in 0..arg_count {
+    let param_types = parse_method_params(&descriptor);
+    let mut args = Vec::with_capacity(param_types.len());
+    for _ in 0..param_types.len() {
         args.push(frame.pop()?);
     }
     args.reverse();
@@ -1669,12 +1672,24 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let mut new_frame = Frame::new(method.clone());
     if !method.is_static {
         new_frame.set_local(0, this_ref)?;
+        let mut local_index = 1;
         for (i, arg) in args.into_iter().enumerate() {
-            new_frame.set_local(i + 1, arg)?;
+            new_frame.set_local(local_index, arg)?;
+            if param_types[i] == 'D' || param_types[i] == 'J' {
+                local_index += 2;
+            } else {
+                local_index += 1;
+            }
         }
     } else {
+        let mut local_index = 0;
         for (i, arg) in args.into_iter().enumerate() {
-            new_frame.set_local(i, arg)?;
+            new_frame.set_local(local_index, arg)?;
+            if param_types[i] == 'D' || param_types[i] == 'J' {
+                local_index += 2;
+            } else {
+                local_index += 1;
+            }
         }
     }
     
@@ -1698,15 +1713,36 @@ fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let method = target_class.get_method(&method_name, &descriptor)
         .ok_or(RuntimeError::MethodNotFound(class_name, method_name.clone()))?;
     
-    let arg_count = parse_method_descriptor(&descriptor).0;
-    for _ in 0..arg_count {
-        frame.pop()?;
+    let param_types = parse_method_params(&descriptor);
+    let mut args = Vec::with_capacity(param_types.len());
+    for _ in 0..param_types.len() {
+        args.push(frame.pop()?);
     }
+    args.reverse();
     let this_ref = frame.pop()?;
     
     let mut new_frame = Frame::new(method.clone());
     if !method.is_static {
         new_frame.set_local(0, this_ref)?;
+        let mut local_index = 1;
+        for (i, arg) in args.into_iter().enumerate() {
+            new_frame.set_local(local_index, arg)?;
+            if param_types[i] == 'D' || param_types[i] == 'J' {
+                local_index += 2;
+            } else {
+                local_index += 1;
+            }
+        }
+    } else {
+        let mut local_index = 0;
+        for (i, arg) in args.into_iter().enumerate() {
+            new_frame.set_local(local_index, arg)?;
+            if param_types[i] == 'D' || param_types[i] == 'J' {
+                local_index += 2;
+            } else {
+                local_index += 1;
+            }
+        }
     }
     
     frame.pc += 3;
@@ -1745,6 +1781,155 @@ fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     jvm.stack.push(frame.clone())?;
     jvm.stack.push(new_frame)?;
     
+    Ok(0)
+}
+
+fn handle_invokeinterface(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    let count = code[frame.pc + 3] as usize;
+    let zero = code[frame.pc + 4];
+    
+    let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
+    let (interface_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
+    
+    let param_types = parse_method_params(&descriptor);
+    let mut args = Vec::with_capacity(param_types.len());
+    for _ in 0..param_types.len() {
+        args.push(frame.pop()?);
+    }
+    args.reverse();
+    
+    let this_ref = frame.pop()?;
+    
+    if this_ref.is_null() {
+        return Err(RuntimeError(RuntimeError::NullPointerException));
+    }
+    
+    let obj_id = this_ref.as_ref();
+    let obj = jvm.heap.get(obj_id)
+        .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
+    let actual_class_name = &obj.class_name;
+    
+    let target_class = jvm.method_area.get_class(actual_class_name)
+        .ok_or(RuntimeError::NoSuchClass(actual_class_name.clone()))?;
+    
+    let method = target_class.get_method(&method_name, &descriptor)
+        .ok_or(RuntimeError::MethodNotFound(actual_class_name.clone(), method_name.clone()))?;
+    
+    let mut new_frame = Frame::new(method.clone());
+    new_frame.set_local(0, this_ref)?;
+    let mut local_index = 1;
+    for (i, arg) in args.into_iter().enumerate() {
+        new_frame.set_local(local_index, arg)?;
+        if param_types[i] == 'D' || param_types[i] == 'J' {
+            local_index += 2;
+        } else {
+            local_index += 1;
+        }
+    }
+    
+    frame.pc += 5;
+    jvm.stack.push(frame.clone())?;
+    jvm.stack.push(new_frame)?;
+    
+    Ok(0)
+}
+
+fn handle_invokedynamic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
+    
+    let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
+    
+    let invoke_dynamic = class.class_file.constant_pool.get(index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
+    
+    let (bootstrap_method_attr_index, name_and_type_index) = match invoke_dynamic {
+        crate::classfile::constant_pool::CpInfo::InvokeDynamic { bootstrap_method_attr_index, name_and_type_index } => 
+            (*bootstrap_method_attr_index as usize, *name_and_type_index),
+        _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(index))),
+    };
+    
+    let name_and_type = class.class_file.constant_pool.get(name_and_type_index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_and_type_index)))?;
+    
+    let (name_index, descriptor_index) = match name_and_type {
+        crate::classfile::constant_pool::CpInfo::NameAndType { name_index, descriptor_index } => 
+            (*name_index, *descriptor_index),
+        _ => return Err(JvmError::ClassFileError(ClassFileError::InvalidConstantPoolTag(name_and_type_index))),
+    };
+    
+    let method_name = class.class_file.constant_pool.get_utf8(name_index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(name_index)))?;
+    
+    let descriptor = class.class_file.constant_pool.get_utf8(descriptor_index)
+        .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(descriptor_index)))?;
+    
+    if method_name == "makeConcatWithConstants" {
+        let bootstrap_methods_attr = class.class_file.attributes.iter()
+            .find(|attr| matches!(attr, crate::classfile::attributes::Attribute::BootstrapMethods(_)));
+        
+        if let Some(crate::classfile::attributes::Attribute::BootstrapMethods(bootstrap_methods)) = bootstrap_methods_attr {
+            if let Some(bootstrap_method) = bootstrap_methods.methods.get(bootstrap_method_attr_index) {
+                if let Some(recipe_index) = bootstrap_method.bootstrap_arguments.first() {
+                    if let Some(crate::classfile::constant_pool::CpInfo::String(string_index)) = class.class_file.constant_pool.get(*recipe_index) {
+                        if let Some(recipe_str) = class.class_file.constant_pool.get_utf8(*string_index) {
+                            let arg_count = parse_method_descriptor(&descriptor).0;
+                            let mut args = Vec::with_capacity(arg_count);
+                            for _ in 0..arg_count {
+                                args.push(frame.pop()?);
+                            }
+                            args.reverse();
+                            
+                            let mut result = String::new();
+                            let mut parts = recipe_str.split('\u{0001}');
+                            result.push_str(parts.next().unwrap_or(""));
+                            
+                            for (i, arg) in args.iter().enumerate() {
+                                if let Some(part) = parts.next() {
+                                    let arg_str = match arg {
+                                        Value::ObjectRef(ref_id) => {
+                                            if let Some(obj) = jvm.heap.get(*ref_id) {
+                                                obj.string_value.clone().unwrap_or_else(|| format!("{:?}", arg))
+                                            } else {
+                                                format!("{:?}", arg)
+                                            }
+                                        }
+                                        Value::Int(v) => v.to_string(),
+                                        Value::Long(v) => v.to_string(),
+                                        Value::Float(v) => v.to_string(),
+                                        Value::Double(v) => v.to_string(),
+                                        Value::Boolean(v) => v.to_string(),
+                                        _ => format!("{:?}", arg),
+                                    };
+                                    result.push_str(&arg_str);
+                                    result.push_str(part);
+                                }
+                            }
+                            
+                            let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                            let result_ref = jvm.heap.allocate(result_obj)?;
+                            frame.push(Value::ObjectRef(result_ref))?;
+                            
+                            frame.pc += 5;
+                            return Ok(0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return Err(JvmError::InterpreterError(InterpreterError::UnsupportedInvokeDynamic(
+        method_name, descriptor
+    )));
+}
+
+fn handle_goto_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    let code = &frame.method.code;
+    let offset = i32::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2], code[frame.pc + 3], code[frame.pc + 4]]);
+    frame.pc = (frame.pc as i32 + offset) as usize;
     Ok(0)
 }
 
@@ -2115,13 +2300,56 @@ pub fn parse_method_descriptor(descriptor: &str) -> (usize, bool) {
                 i += 1;
                 params += 1;
             }
+            _ => {
+                i += 1;
+            }
+        }
+    }
+    
+    let return_type = &descriptor[i+1..];
+    let returns_value = !return_type.is_empty() && return_type != "V";
+    
+    (params, returns_value)
+}
+
+pub fn parse_method_params(descriptor: &str) -> Vec<char> {
+    if !descriptor.starts_with('(') {
+        return Vec::new();
+    }
+    
+    let mut param_types = Vec::new();
+    let mut i = 1;
+    
+    while i < descriptor.len() && descriptor.chars().nth(i) != Some(')') {
+        match descriptor.chars().nth(i).unwrap() {
+            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z' => {
+                param_types.push(descriptor.chars().nth(i).unwrap());
+                i += 1;
+            }
+            '[' => {
+                while descriptor.chars().nth(i) == Some('[') {
+                    i += 1;
+                }
+                if descriptor.chars().nth(i) == Some('L') {
+                    while i < descriptor.len() && descriptor.chars().nth(i) != Some(';') {
+                        i += 1;
+                    }
+                    i += 1;
+                } else {
+                    i += 1;
+                }
+                param_types.push('[' );
+            }
+            'L' => {
+                while i < descriptor.len() && descriptor.chars().nth(i) != Some(';') {
+                    i += 1;
+                }
+                i += 1;
+                param_types.push('L');
+            }
             _ => i += 1,
         }
     }
     
-    i += 1;
-    let return_type = descriptor[i..].to_string();
-    let has_return = !return_type.is_empty() && return_type != "V";
-    
-    (params, has_return)
+    param_types
 }

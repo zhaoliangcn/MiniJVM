@@ -217,7 +217,7 @@ impl MethodArea {
             self.classes.insert(class_name.to_string(), class);
         }
     }
-
+    
     pub fn get_class(&self, class_name: &str) -> Option<&Class> {
         self.classes.get(class_name)
     }

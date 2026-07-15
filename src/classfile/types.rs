@@ -25,6 +25,8 @@ impl AccessFlags {
     pub const ANNOTATION: u16 = 0x2000;
     pub const ENUM: u16 = 0x4000;
     pub const MODULE: u16 = 0x8000;
+    pub const RECORD: u16 = 0x00002000;
+    pub const SEALED: u16 = 0x00008000;
 
     pub fn new(flags: u16) -> Self {
         AccessFlags(flags)
@@ -127,7 +129,11 @@ impl ClassFile {
     }
 
     pub fn get_class_name(&self) -> Option<String> {
-        self.constant_pool.get_class_name(self.this_class)
+        if self.this_class == 0 {
+            None
+        } else {
+            self.constant_pool.get_class_name(self.this_class)
+        }
     }
 
     pub fn get_super_class_name(&self) -> Option<String> {

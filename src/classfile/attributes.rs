@@ -14,6 +14,8 @@ pub enum Attribute {
     BootstrapMethods(BootstrapMethods),
     NestHost(NestHost),
     NestMembers(NestMembers),
+    Record(RecordAttribute),
+    PermittedSubclasses(PermittedSubclasses),
     Unparsed(String, Vec<u8>),
 }
 
@@ -160,4 +162,21 @@ pub struct NestHost {
 #[derive(Debug, Clone)]
 pub struct NestMembers {
     pub member_classes: Vec<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RecordAttribute {
+    pub components: Vec<RecordComponentInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RecordComponentInfo {
+    pub name_index: usize,
+    pub descriptor_index: usize,
+    pub attributes: Vec<Attribute>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PermittedSubclasses {
+    pub permitted_subclass_indices: Vec<usize>,
 }

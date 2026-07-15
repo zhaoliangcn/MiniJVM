@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::string::String as StdString;
 use crate::runtime::{JVM, Frame, Value, method_area::{Method, NativeImplementation}};
 
 pub struct Object;
@@ -587,9 +588,779 @@ impl Throwable {
     }
 }
 
+pub struct StringBuilder;
+
+impl StringBuilder {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value = Some(StdString::new());
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_with_capacity() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value = Some(StdString::new());
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_with_string() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else {
+                    StdString::new()
+                }
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value = Some(s);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_string() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else {
+                    StdString::new()
+                }
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(Ljava/lang/String;)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::Int(i) = val {
+                i.to_string()
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(I)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_long() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::Long(l) = val {
+                l.to_string()
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(J)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_double() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::Double(d) = val {
+                d.to_string()
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(D)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_bool() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::Boolean(b) = val {
+                b.to_string()
+            } else {
+                StdString::new()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(Z)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_char() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            if let Value::Char(c) = val {
+                if let Value::ObjectRef(this_id) = this_ref {
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        if let Some(ch) = char::from_u32(*c as u32) {
+                            obj.string_value.get_or_insert_with(StdString::new).push(ch);
+                        }
+                    }
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(C)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_obj() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj_ref = frame.get_local(1)?;
+            let this_ref = frame.get_local(0)?;
+            
+            let s = if let Value::ObjectRef(obj_id) = obj_ref {
+                if let Some(obj) = jvm.heap.get(*obj_id) {
+                    obj.string_value.clone().unwrap_or_else(|| format!("{}@{}", obj.class_name, obj_id))
+                } else {
+                    StdString::new()
+                }
+            } else {
+                "null".to_string()
+            };
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.string_value.get_or_insert_with(StdString::new).push_str(&s);
+                }
+            }
+            
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "append".to_string(), "(Ljava/lang/Object;)Ljava/lang/StringBuilder;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let s = obj.string_value.clone().unwrap_or_default();
+                    let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                    let str_ref = jvm.heap.allocate(str_obj)?;
+                    frame.push(Value::ObjectRef(str_ref))?;
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn length() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let len = obj.string_value.as_ref().map(|s| s.len() as i32).unwrap_or(0);
+                    frame.push(Value::Int(len))?;
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuilder".to_string(), "length".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::init());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::init_with_capacity());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::init_with_string());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_string());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_int());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_long());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_double());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_bool());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_char());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::append_obj());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::toString());
+        jvm.method_area.add_native_method("java.lang.StringBuilder", StringBuilder::length());
+    }
+}
+
+pub struct Integer;
+
+impl Integer {
+    pub fn parseInt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i32>() {
+                            frame.push(Value::Int(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "parseInt".to_string(), "(Ljava/lang/String;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn parseInt_radix() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let radix = frame.get_local(1)?;
+            let str_ref = frame.get_local(0)?;
+            
+            let radix_val = if let Value::Int(r) = radix { *r } else { 10 };
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = i32::from_str_radix(s, radix_val as u32) {
+                            frame.push(Value::Int(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "parseInt".to_string(), "(Ljava/lang/String;I)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(i) = val {
+                let s = i.to_string();
+                let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.heap.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "valueOf".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+    
+    pub fn valueOf_int_obj() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(ref i) = val {
+                let mut obj = crate::runtime::heap::HeapObject::new("java.lang.Integer".to_string());
+                obj.fields.insert("value:I".to_string(), Value::Int(*i));
+                let obj_ref = jvm.heap.allocate(obj)?;
+                frame.push(Value::ObjectRef(obj_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "valueOf".to_string(), "(I)Ljava/lang/Integer;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf_string() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i32>() {
+                            let result = Method::new_native(
+                                "java.lang.Integer".to_string(),
+                                "valueOf".to_string(),
+                                "(I)Ljava/lang/Integer;".to_string(),
+                                true,
+                                None
+                            );
+                            let obj = crate::runtime::heap::HeapObject::new("java.lang.Integer".to_string());
+                            let obj_ref = jvm.heap.allocate(obj)?;
+                            frame.push(Value::ObjectRef(obj_ref))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "valueOf".to_string(), "(Ljava/lang/String;)Ljava/lang/Integer;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(i) = val {
+                let s = i.to_string();
+                let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.heap.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "toString".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toHexString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(i) = val {
+                let s = format!("{:x}", i);
+                let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.heap.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "toHexString".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MAX_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(i32::MAX))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "MAX_VALUE".to_string(), "()I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MIN_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(i32::MIN))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "MIN_VALUE".to_string(), "()I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn SIZE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(32))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "SIZE".to_string(), "()I".to_string(), true, Some(native_impl))
+    }
+    
+    pub fn intValue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*obj_id) {
+                    if let Some(val) = obj.get_field("value:I") {
+                        if let Value::Int(i) = val {
+                            frame.push(Value::Int(*i))?;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "intValue".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::parseInt());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::parseInt_radix());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::valueOf_int());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::valueOf_int_obj());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::valueOf_string());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::toString());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::toHexString());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::MAX_VALUE());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::MIN_VALUE());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::SIZE());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::intValue());
+    }
+}
+
+pub struct Long;
+
+impl Long {
+    pub fn parseLong() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i64>() {
+                            frame.push(Value::Long(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "parseLong".to_string(), "(Ljava/lang/String;)J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i64>() {
+                            let obj = crate::runtime::heap::HeapObject::new("java.lang.Long".to_string());
+                            let obj_ref = jvm.heap.allocate(obj)?;
+                            frame.push(Value::ObjectRef(obj_ref))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "valueOf".to_string(), "(Ljava/lang/String;)Ljava/lang/Long;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Long(l) = val {
+                let s = l.to_string();
+                let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.heap.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "toString".to_string(), "(J)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MAX_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Long(i64::MAX))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "MAX_VALUE".to_string(), "()J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MIN_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Long(i64::MIN))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "MIN_VALUE".to_string(), "()J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn SIZE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(64))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "SIZE".to_string(), "()I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Long", Long::parseLong());
+        jvm.method_area.add_native_method("java.lang.Long", Long::valueOf());
+        jvm.method_area.add_native_method("java.lang.Long", Long::toString());
+        jvm.method_area.add_native_method("java.lang.Long", Long::MAX_VALUE());
+        jvm.method_area.add_native_method("java.lang.Long", Long::MIN_VALUE());
+        jvm.method_area.add_native_method("java.lang.Long", Long::SIZE());
+    }
+}
+
+pub struct Double;
+
+impl Double {
+    pub fn parseDouble() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<f64>() {
+                            frame.push(Value::Double(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Double".to_string(), "parseDouble".to_string(), "(Ljava/lang/String;)D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<f64>() {
+                            let obj = crate::runtime::heap::HeapObject::new("java.lang.Double".to_string());
+                            let obj_ref = jvm.heap.allocate(obj)?;
+                            frame.push(Value::ObjectRef(obj_ref))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Double".to_string(), "valueOf".to_string(), "(Ljava/lang/String;)Ljava/lang/Double;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Double(d) = val {
+                let s = d.to_string();
+                let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.heap.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Double".to_string(), "toString".to_string(), "(D)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MAX_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Double(f64::MAX))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Double".to_string(), "MAX_VALUE".to_string(), "()D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn MIN_VALUE() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Double(f64::MIN))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Double".to_string(), "MIN_VALUE".to_string(), "()D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Double", Double::parseDouble());
+        jvm.method_area.add_native_method("java.lang.Double", Double::valueOf());
+        jvm.method_area.add_native_method("java.lang.Double", Double::toString());
+        jvm.method_area.add_native_method("java.lang.Double", Double::MAX_VALUE());
+        jvm.method_area.add_native_method("java.lang.Double", Double::MIN_VALUE());
+    }
+}
+
+pub struct Math;
+
+impl Math {
+    pub fn abs_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = frame.pop()?;
+            if let Value::Int(i) = val {
+                frame.push(Value::Int(i.abs()))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "abs".to_string(), "(I)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn abs_long() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = frame.pop()?;
+            if let Value::Long(l) = val {
+                frame.push(Value::Long(l.abs()))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "abs".to_string(), "(J)J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn abs_float() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = frame.pop()?;
+            if let Value::Float(f) = val {
+                frame.push(Value::Float(f.abs()))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "abs".to_string(), "(F)F".to_string(), true, Some(native_impl))
+    }
+
+    pub fn abs_double() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = frame.pop()?;
+            if let Value::Double(d) = val {
+                frame.push(Value::Double(d.abs()))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "abs".to_string(), "(D)D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn max_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let b = frame.pop()?.as_int();
+            let a = frame.pop()?.as_int();
+            frame.push(Value::Int(a.max(b)))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "max".to_string(), "(II)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn max_long() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let b = frame.pop()?.as_long();
+            let a = frame.pop()?.as_long();
+            frame.push(Value::Long(a.max(b)))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "max".to_string(), "(JJ)J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn min_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let b = frame.pop()?.as_int();
+            let a = frame.pop()?.as_int();
+            frame.push(Value::Int(a.min(b)))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "min".to_string(), "(II)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn min_long() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let b = frame.pop()?.as_long();
+            let a = frame.pop()?.as_long();
+            frame.push(Value::Long(a.min(b)))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "min".to_string(), "(JJ)J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn sqrt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = frame.pop()?.as_double();
+            frame.push(Value::Double(val.sqrt()))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "sqrt".to_string(), "(D)D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn pow() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let exp = frame.pop()?.as_double();
+            let base = frame.pop()?.as_double();
+            frame.push(Value::Double(base.powf(exp)))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Math".to_string(), "pow".to_string(), "(DD)D".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Math", Math::abs_int());
+        jvm.method_area.add_native_method("java.lang.Math", Math::abs_long());
+        jvm.method_area.add_native_method("java.lang.Math", Math::abs_float());
+        jvm.method_area.add_native_method("java.lang.Math", Math::abs_double());
+        jvm.method_area.add_native_method("java.lang.Math", Math::max_int());
+        jvm.method_area.add_native_method("java.lang.Math", Math::max_long());
+        jvm.method_area.add_native_method("java.lang.Math", Math::min_int());
+        jvm.method_area.add_native_method("java.lang.Math", Math::min_long());
+        jvm.method_area.add_native_method("java.lang.Math", Math::sqrt());
+        jvm.method_area.add_native_method("java.lang.Math", Math::pow());
+        
+        jvm.method_area.set_static_field("java.lang.Math", "PI", "D", Value::Double(std::f64::consts::PI));
+        jvm.method_area.set_static_field("java.lang.Math", "E", "D", Value::Double(std::f64::consts::E));
+    }
+}
+
+pub struct Record;
+
+impl Record {
+    pub fn register(jvm: &mut JVM) {
+        let init_method = Method::new_native(
+            "java.lang.Record".to_string(),
+            "<init>".to_string(),
+            "()V".to_string(),
+            false,
+            None
+        );
+        jvm.method_area.add_native_method("java.lang.Record", init_method);
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
+    Record::register(jvm);
     String::register(jvm);
+    StringBuilder::register(jvm);
+    Integer::register(jvm);
+    Long::register(jvm);
+    Double::register(jvm);
+    Math::register(jvm);
     System::register(jvm);
     Thread::register(jvm);
     Throwable::register(jvm);

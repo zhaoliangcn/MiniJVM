@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::path::{Path, PathBuf};
 use minijvm_lib::{
     classfile::ClassFileParser,
     runtime::{JVM, Frame},
@@ -26,6 +27,36 @@ fn main() {
     }
 }
 
+fn load_all_classes_in_directory(jvm: &mut JVM) -> Result<(), JvmError> {
+    let current_dir = env::current_dir()?;
+    if let Ok(entries) = fs::read_dir(&current_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(ext) = path.extension() {
+                if ext == "class" {
+                    let class_data = fs::read(&path)?;
+                    let mut parser = ClassFileParser::new(&class_data);
+                    match parser.parse() {
+                        Ok(class_file) => {
+                            let class_name = class_file.get_class_name().unwrap_or_default();
+                            if !jvm.method_area.has_class(&class_name) {
+                                match minijvm_lib::runtime::method_area::Class::new(class_file) {
+                                    Ok(class) => {
+                                        jvm.method_area.add_class(class);
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     let class_data = fs::read(classfile_path)?;
     
@@ -34,8 +65,6 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     
     let class_name = class_file.get_class_name()
         .ok_or(JvmError::ClassFileError(minijvm_lib::error::ClassFileError::ClassNotFound("unknown".to_string())))?;
-    
-    println!("Loaded class: {}", class_name);
     
     let mut jvm = JVM::new();
     
@@ -49,6 +78,8 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     
     let class = minijvm_lib::runtime::method_area::Class::new(class_file)?;
     jvm.method_area.add_class(class);
+    
+    load_all_classes_in_directory(&mut jvm)?;
     
     if let Some(clinit_method) = jvm.method_area.get_method(&class_name, "<clinit>", "()V") {
         let clinit_frame = Frame::new(clinit_method.clone());

@@ -136,6 +136,9 @@ pub enum InterpreterError {
     
     #[error("Invalid stack map frame")]
     InvalidStackMapFrame,
+    
+    #[error("Unsupported invokedynamic: {0} {1}")]
+    UnsupportedInvokeDynamic(String, String),
 }
 
 #[derive(Error, Debug)]

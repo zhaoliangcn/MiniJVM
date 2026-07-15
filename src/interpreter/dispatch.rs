@@ -76,7 +76,7 @@ impl Interpreter {
             }
 
             let opcode = frame.method.code[frame.pc];
-            let is_call = matches!(opcode, 0xb6 | 0xb7 | 0xb8);
+            let is_call = matches!(opcode, 0xb6 | 0xb7 | 0xb8 | 0xb9 | 0xba);
             let handler = self.instruction_set.get_handler(opcode)
                 .ok_or(InterpreterError::UnknownOpcode(opcode))?;
 
@@ -85,6 +85,9 @@ impl Interpreter {
             match result {
                 Ok(pc_increment) => {
                     if is_call {
+                        if jvm.stack.is_empty() {
+                            jvm.stack.push(frame)?;
+                        }
                         continue;
                     }
                     

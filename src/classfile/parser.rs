@@ -1,7 +1,7 @@
 use std::io::{Read, Cursor};
 use super::types::{ClassFile, FieldInfo, MethodInfo};
 use super::constant_pool::{ConstantPool, CpInfo};
-use super::attributes::{Attribute, CodeAttribute, ExceptionTableEntry, StackMapTable, LineNumberTable, SourceFile};
+use super::attributes::{Attribute, CodeAttribute, ExceptionTableEntry, StackMapTable, LineNumberTable, SourceFile, RecordAttribute, RecordComponentInfo, PermittedSubclasses};
 use crate::error::{ClassFileError, JvmError, Result};
 
 pub struct ClassFileParser<'a> {
@@ -66,13 +66,17 @@ impl<'a> ClassFileParser<'a> {
         let mut entries = Vec::with_capacity(cp_count);
         entries.push(None);
 
-        for i in 1..cp_count {
+        let mut i = 1;
+        while i < cp_count {
             let tag = self.read_u8()?;
             let entry = self.parse_constant_pool_entry(tag, i)?;
             entries.push(Some(entry));
             
             if tag == 5 || tag == 6 {
                 entries.push(None);
+                i += 2;
+            } else {
+                i += 1;
             }
         }
 
@@ -238,14 +242,53 @@ impl<'a> ClassFileParser<'a> {
             "Code" => self.parse_code_attribute(&mut data.as_slice(), constant_pool),
             "StackMapTable" => Ok(Attribute::StackMapTable(StackMapTable { entries: Vec::new() })),
             "LineNumberTable" => self.parse_line_number_table(&mut data.as_slice()),
-            "SourceFile" => Ok(Attribute::SourceFile(SourceFile { source_file_index: name_index })),
-            "InnerClasses" => Ok(Attribute::InnerClasses(super::attributes::InnerClasses { classes: Vec::new() })),
-            "EnclosingMethod" => Ok(Attribute::EnclosingMethod(super::attributes::EnclosingMethod { class_index: 0, method_index: 0 })),
+            "SourceFile" => {
+                let mut cursor = Cursor::new(data.as_slice());
+                let mut buf = [0u8; 2];
+                cursor.read_exact(&mut buf)?;
+                let source_file_index = u16::from_be_bytes(buf) as usize;
+                Ok(Attribute::SourceFile(SourceFile { source_file_index }))
+            },
+            "InnerClasses" => {
+                let mut cursor = Cursor::new(data.as_slice());
+                let mut buf = [0u8; 2];
+                cursor.read_exact(&mut buf)?;
+                let classes_count = u16::from_be_bytes(buf) as usize;
+                let mut classes = Vec::with_capacity(classes_count);
+                for _ in 0..classes_count {
+                    cursor.read_exact(&mut buf)?;
+                    let inner_class_info_index = u16::from_be_bytes(buf) as usize;
+                    cursor.read_exact(&mut buf)?;
+                    let outer_class_info_index = u16::from_be_bytes(buf) as usize;
+                    cursor.read_exact(&mut buf)?;
+                    let inner_name_index = u16::from_be_bytes(buf) as usize;
+                    cursor.read_exact(&mut buf)?;
+                    let inner_class_access_flags = u16::from_be_bytes(buf);
+                    classes.push(super::attributes::InnerClassEntry { 
+                        inner_class_info_index, 
+                        outer_class_info_index, 
+                        inner_name_index, 
+                        inner_class_access_flags 
+                    });
+                }
+                Ok(Attribute::InnerClasses(super::attributes::InnerClasses { classes }))
+            },
+            "EnclosingMethod" => {
+                let mut cursor = Cursor::new(data.as_slice());
+                let mut buf = [0u8; 2];
+                cursor.read_exact(&mut buf)?;
+                let class_index = u16::from_be_bytes(buf) as usize;
+                cursor.read_exact(&mut buf)?;
+                let method_index = u16::from_be_bytes(buf) as usize;
+                Ok(Attribute::EnclosingMethod(super::attributes::EnclosingMethod { class_index, method_index }))
+            },
             "Synthetic" => Ok(Attribute::Synthetic),
             "Signature" => Ok(Attribute::Signature(name)),
-            "BootstrapMethods" => Ok(Attribute::BootstrapMethods(super::attributes::BootstrapMethods { methods: Vec::new() })),
+            "BootstrapMethods" => self.parse_bootstrap_methods(&mut data.as_slice()),
             "NestHost" => Ok(Attribute::NestHost(super::attributes::NestHost { host_class_index: 0 })),
             "NestMembers" => Ok(Attribute::NestMembers(super::attributes::NestMembers { member_classes: Vec::new() })),
+            "Record" => self.parse_record_attribute(&mut data.as_slice(), constant_pool),
+            "PermittedSubclasses" => self.parse_permitted_subclasses(&mut data.as_slice()),
             _ => Ok(Attribute::Unparsed(name, data)),
         }
     }
@@ -307,6 +350,69 @@ impl<'a> ClassFileParser<'a> {
             entries.push(super::attributes::LineNumberEntry { start_pc, line_number });
         }
         Ok(Attribute::LineNumberTable(LineNumberTable { entries }))
+    }
+
+    fn parse_bootstrap_methods(&self, data: &mut &[u8]) -> Result<Attribute> {
+        let mut cursor = Cursor::new(*data);
+        let mut buf = [0u8; 2];
+        cursor.read_exact(&mut buf)?;
+        let num_bootstrap_methods = u16::from_be_bytes(buf) as usize;
+        let mut methods = Vec::with_capacity(num_bootstrap_methods);
+        for _ in 0..num_bootstrap_methods {
+            cursor.read_exact(&mut buf)?;
+            let bootstrap_method_ref = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let num_bootstrap_arguments = u16::from_be_bytes(buf) as usize;
+            let mut bootstrap_arguments = Vec::with_capacity(num_bootstrap_arguments);
+            for _ in 0..num_bootstrap_arguments {
+                cursor.read_exact(&mut buf)?;
+                bootstrap_arguments.push(u16::from_be_bytes(buf) as usize);
+            }
+            methods.push(super::attributes::BootstrapMethod { bootstrap_method_ref, bootstrap_arguments });
+        }
+        Ok(Attribute::BootstrapMethods(super::attributes::BootstrapMethods { methods }))
+    }
+
+    fn parse_record_attribute(&self, data: &mut &[u8], constant_pool: &ConstantPool) -> Result<Attribute> {
+        let mut cursor = Cursor::new(*data);
+        let mut buf = [0u8; 2];
+        cursor.read_exact(&mut buf)?;
+        let components_count = u16::from_be_bytes(buf) as usize;
+        let mut components = Vec::with_capacity(components_count);
+        for _ in 0..components_count {
+            cursor.read_exact(&mut buf)?;
+            let name_index = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let descriptor_index = u16::from_be_bytes(buf) as usize;
+            cursor.read_exact(&mut buf)?;
+            let attributes_count = u16::from_be_bytes(buf) as usize;
+            let mut attributes = Vec::with_capacity(attributes_count);
+            for _ in 0..attributes_count {
+                let mut attr_data = vec![0u8; 6];
+                cursor.read_exact(&mut attr_data)?;
+                let attr_name_index = u16::from_be_bytes([attr_data[0], attr_data[1]]) as usize;
+                let attr_length = u32::from_be_bytes([attr_data[2], attr_data[3], attr_data[4], attr_data[5]]) as usize;
+                let mut attr_bytes = vec![0u8; attr_length];
+                cursor.read_exact(&mut attr_bytes)?;
+                let attr_name = constant_pool.get_utf8(attr_name_index).unwrap_or_default();
+                attributes.push(Attribute::Unparsed(attr_name, attr_bytes));
+            }
+            components.push(RecordComponentInfo { name_index, descriptor_index, attributes });
+        }
+        Ok(Attribute::Record(RecordAttribute { components }))
+    }
+
+    fn parse_permitted_subclasses(&self, data: &mut &[u8]) -> Result<Attribute> {
+        let mut cursor = Cursor::new(*data);
+        let mut buf = [0u8; 2];
+        cursor.read_exact(&mut buf)?;
+        let permitted_count = u16::from_be_bytes(buf) as usize;
+        let mut permitted_subclass_indices = Vec::with_capacity(permitted_count);
+        for _ in 0..permitted_count {
+            cursor.read_exact(&mut buf)?;
+            permitted_subclass_indices.push(u16::from_be_bytes(buf) as usize);
+        }
+        Ok(Attribute::PermittedSubclasses(PermittedSubclasses { permitted_subclass_indices }))
     }
 
     fn read_u8(&mut self) -> Result<u8> {

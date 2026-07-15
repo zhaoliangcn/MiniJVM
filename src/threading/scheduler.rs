@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use crate::error::{ThreadingError, JvmError, Result};
+use crate::runtime::JvmStack;
 use super::thread::{Thread, ThreadState, ThreadPriority};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,7 @@ pub enum SchedulingPolicy {
 
 pub struct Scheduler {
     threads: HashMap<usize, Thread>,
+    thread_stacks: HashMap<usize, JvmStack>,
     ready_queue: VecDeque<usize>,
     policy: SchedulingPolicy,
     current_thread: Option<usize>,
@@ -22,6 +24,7 @@ impl Scheduler {
     pub fn new(policy: SchedulingPolicy) -> Self {
         Scheduler {
             threads: HashMap::new(),
+            thread_stacks: HashMap::new(),
             ready_queue: VecDeque::new(),
             policy,
             current_thread: None,
@@ -36,6 +39,7 @@ impl Scheduler {
         
         let thread = Thread::new(id, name);
         self.threads.insert(id, thread);
+        self.thread_stacks.insert(id, JvmStack::new());
         
         Ok(id)
     }
@@ -44,10 +48,26 @@ impl Scheduler {
         let thread = self.threads.get_mut(&thread_id)
             .ok_or(JvmError::ThreadingError(ThreadingError::ThreadCreationFailed))?;
         
+        if thread.get_state() != ThreadState::New {
+            return Err(JvmError::ThreadingError(ThreadingError::ThreadCreationFailed));
+        }
+        
         thread.set_state(ThreadState::Runnable);
         self.add_to_ready_queue(thread_id);
         
         Ok(())
+    }
+
+    /// Save the current thread's stack into the scheduler.
+    /// Returns the thread_id whose stack was saved.
+    pub fn save_stack(&mut self, thread_id: usize, stack: JvmStack) {
+        self.thread_stacks.insert(thread_id, stack);
+    }
+
+    /// Take a thread's stack out of the scheduler.
+    /// Returns an empty stack if the thread has no saved stack.
+    pub fn take_stack(&mut self, thread_id: usize) -> JvmStack {
+        self.thread_stacks.remove(&thread_id).unwrap_or_else(JvmStack::new)
     }
 
     pub fn schedule(&mut self) -> Option<usize> {
@@ -115,6 +135,15 @@ impl Scheduler {
         }
         
         Ok(())
+    }
+
+    pub fn set_thread_terminated(&mut self, thread_id: usize) {
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            thread.set_state(ThreadState::Terminated);
+        }
+        if self.current_thread == Some(thread_id) {
+            self.current_thread = None;
+        }
     }
 
     pub fn get_thread(&self, thread_id: usize) -> Option<&Thread> {
@@ -188,6 +217,16 @@ impl Scheduler {
 
     pub fn ready_count(&self) -> usize {
         self.ready_queue.len()
+    }
+
+    pub fn has_runnable_threads(&self) -> bool {
+        !self.ready_queue.is_empty() || self.current_thread.is_some()
+    }
+
+    pub fn is_thread_terminated(&self, thread_id: usize) -> bool {
+        self.threads.get(&thread_id)
+            .map(|t| t.get_state() == ThreadState::Terminated)
+            .unwrap_or(true)
     }
 }
 

@@ -1,9 +1,8 @@
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
 use minijvm_lib::{
     classfile::ClassFileParser,
-    runtime::{JVM, Frame},
+    runtime::{JVM, Frame, Value},
     interpreter::Interpreter,
     stdlib,
     JvmError,
@@ -71,31 +70,42 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     stdlib::lang::register_standard_classes(&mut jvm);
     stdlib::io::PrintStream::register(&mut jvm);
     
-    let print_stream_obj = minijvm_lib::runtime::heap::HeapObject::new("java.io.PrintStream".to_string());
-    let print_stream_ref = jvm.heap.allocate(print_stream_obj)?;
+    // Register native Thread methods
+    stdlib::lang::register_thread_natives(&mut jvm);
     
-    jvm.method_area.set_static_field("java.lang.System", "out", "Ljava/io/PrintStream;", minijvm_lib::runtime::value::Value::ObjectRef(print_stream_ref));
+    let print_stream_obj = minijvm_lib::runtime::heap::HeapObject::new("java.io.PrintStream".to_string());
+    let print_stream_ref = jvm.allocate(print_stream_obj)?;
+    
+    jvm.method_area.set_static_field("java.lang.System", "out", "Ljava/io/PrintStream;", Value::ObjectRef(print_stream_ref));
     
     let class = minijvm_lib::runtime::method_area::Class::new(class_file)?;
     jvm.method_area.add_class(class);
     
     load_all_classes_in_directory(&mut jvm)?;
     
+    // Run <clinit> on the main thread
+    let main_thread_id = jvm.current_thread_id;
     if let Some(clinit_method) = jvm.method_area.get_method(&class_name, "<clinit>", "()V") {
         let clinit_frame = Frame::new(clinit_method.clone());
         jvm.stack.push(clinit_frame)?;
+        // Save the stack to the main thread's scheduler slot before running
+        jvm.save_current_stack();
         let interpreter = Interpreter::new();
-        interpreter.run(&mut jvm)?;
+        interpreter.run(&mut jvm, main_thread_id)?;
     }
     
+    // Create and run the main method on the main thread
     let main_method = jvm.method_area.get_method(&class_name, "main", "([Ljava/lang/String;)V")
         .ok_or(JvmError::RuntimeError(minijvm_lib::error::RuntimeError::MethodNotFound(class_name.clone(), "main".to_string())))?;
     
     let main_frame = Frame::new(main_method.clone());
     jvm.stack.push(main_frame)?;
+    // Save the stack to the main thread's scheduler slot before running
+    jvm.save_current_stack();
     
     let interpreter = Interpreter::new();
-    interpreter.run(&mut jvm)?;
+    // Run as a single-threaded program (the main thread)
+    interpreter.run(&mut jvm, main_thread_id)?;
     
     Ok(())
 }

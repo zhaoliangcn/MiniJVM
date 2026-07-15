@@ -1,12 +1,37 @@
 use std::sync::Arc;
 use std::string::String as StdString;
-use crate::runtime::{JVM, Frame, Value, method_area::{Method, NativeImplementation}};
+use crate::error::{JvmError, RuntimeError, Result};
+use crate::runtime::{JVM, Frame, Value, HeapObject, method_area::{Method, NativeImplementation}};
 
 pub struct Object;
 
 impl Object {
     pub fn get_class() -> Method {
-        Method::new_native("java.lang.Object".to_string(), "getClass".to_string(), "()Ljava/lang/Class;".to_string(), false, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(ref_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*ref_id) {
+                    let class_name = obj.class_name.clone();
+                    // Create a java.lang.Class object
+                    let mut class_obj = HeapObject::new("java.lang.Class".to_string());
+                    class_obj.fields.insert("name".to_string(), Value::Null);
+                    let class_ref = jvm.allocate(class_obj)?;
+                    // Store the class name as a string
+                    let name_obj = HeapObject::new_string("java.lang.String".to_string(), class_name);
+                    let name_ref = jvm.allocate(name_obj)?;
+                    if let Some(co) = jvm.heap.get_mut(class_ref) {
+                        co.fields.insert("name".to_string(), Value::ObjectRef(name_ref));
+                    }
+                    frame.push(Value::ObjectRef(class_ref))?;
+                } else {
+                    frame.push(Value::Null)?;
+                }
+            } else {
+                frame.push(Value::Null)?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Object".to_string(), "getClass".to_string(), "()Ljava/lang/Class;".to_string(), false, Some(native_impl))
     }
 
     pub fn hashCode() -> Method {
@@ -40,7 +65,7 @@ impl Object {
                 if let Some(obj) = jvm.heap.get(*ref_id) {
                     let s = format!("{}@{}", obj.class_name, ref_id);
                     let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                    let str_ref = jvm.heap.allocate(str_obj)?;
+                    let str_ref = jvm.allocate(str_obj)?;
                     frame.push(Value::ObjectRef(str_ref))?;
                 }
             }
@@ -58,7 +83,7 @@ impl Object {
             let this_ref = frame.get_local(0)?;
             if let Value::ObjectRef(obj_id) = &this_ref {
                 if let Some(obj) = jvm.heap.get_mut(*obj_id) {
-                    let current_thread_id = 1;
+                    let current_thread_id = jvm.current_thread_id;
                     if obj.monitor_owner != Some(current_thread_id) {
                         return Err(crate::error::JvmError::ThreadingError(
                             crate::error::ThreadingError::IllegalMonitorState
@@ -76,7 +101,7 @@ impl Object {
             let this_ref = frame.get_local(0)?;
             if let Value::ObjectRef(obj_id) = &this_ref {
                 if let Some(obj) = jvm.heap.get_mut(*obj_id) {
-                    let current_thread_id = 1;
+                    let current_thread_id = jvm.current_thread_id;
                     if obj.monitor_owner != Some(current_thread_id) {
                         return Err(crate::error::JvmError::ThreadingError(
                             crate::error::ThreadingError::IllegalMonitorState
@@ -94,7 +119,7 @@ impl Object {
             let this_ref = frame.get_local(0)?;
             if let Value::ObjectRef(obj_id) = &this_ref {
                 if let Some(obj) = jvm.heap.get_mut(*obj_id) {
-                    let current_thread_id = 1;
+                    let current_thread_id = jvm.current_thread_id;
                     if obj.monitor_owner != Some(current_thread_id) {
                         return Err(crate::error::JvmError::ThreadingError(
                             crate::error::ThreadingError::IllegalMonitorState
@@ -112,7 +137,7 @@ impl Object {
             let this_ref = frame.get_local(0)?;
             if let Value::ObjectRef(obj_id) = &this_ref {
                 if let Some(obj) = jvm.heap.get_mut(*obj_id) {
-                    let current_thread_id = 1;
+                    let current_thread_id = jvm.current_thread_id;
                     if obj.monitor_owner != Some(current_thread_id) {
                         return Err(crate::error::JvmError::ThreadingError(
                             crate::error::ThreadingError::IllegalMonitorState
@@ -130,7 +155,7 @@ impl Object {
             let this_ref = frame.get_local(0)?;
             if let Value::ObjectRef(obj_id) = &this_ref {
                 if let Some(obj) = jvm.heap.get_mut(*obj_id) {
-                    let current_thread_id = 1;
+                    let current_thread_id = jvm.current_thread_id;
                     if obj.monitor_owner != Some(current_thread_id) {
                         return Err(crate::error::JvmError::ThreadingError(
                             crate::error::ThreadingError::IllegalMonitorState
@@ -256,7 +281,7 @@ impl String {
             if let Value::Int(i) = v {
                 let s = i.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -270,7 +295,7 @@ impl String {
             if let Value::Long(l) = v {
                 let s = l.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -284,7 +309,7 @@ impl String {
             if let Value::Float(f) = v {
                 let s = f.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -298,7 +323,7 @@ impl String {
             if let Value::Double(d) = v {
                 let s = d.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -312,7 +337,7 @@ impl String {
             if let Value::Boolean(b) = v {
                 let s = b.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -459,47 +484,47 @@ pub struct Thread;
 
 impl Thread {
     pub fn start() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "start".to_string(), "()V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "start".to_string(), "()V".to_string(), false, Some(Arc::new(thread_start_native)))
     }
 
     pub fn run() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "run".to_string(), "()V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "run".to_string(), "()V".to_string(), false, Some(Arc::new(thread_run_native)))
     }
 
     pub fn sleep() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "sleep".to_string(), "(J)V".to_string(), true, None)
+        Method::new_native("java.lang.Thread".to_string(), "sleep".to_string(), "(J)V".to_string(), true, Some(Arc::new(thread_sleep_native)))
     }
 
     pub fn join() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "join".to_string(), "()V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "join".to_string(), "()V".to_string(), false, Some(Arc::new(thread_join_native)))
     }
 
     pub fn r#yield() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "yield".to_string(), "()V".to_string(), true, None)
+        Method::new_native("java.lang.Thread".to_string(), "yield".to_string(), "()V".to_string(), true, Some(Arc::new(thread_yield_native)))
     }
 
     pub fn currentThread() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "currentThread".to_string(), "()Ljava/lang/Thread;".to_string(), true, None)
+        Method::new_native("java.lang.Thread".to_string(), "currentThread".to_string(), "()Ljava/lang/Thread;".to_string(), true, Some(Arc::new(thread_current_thread_native)))
     }
 
     pub fn getName() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(Arc::new(thread_get_name_native)))
     }
 
     pub fn setName() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "setName".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "setName".to_string(), "(Ljava/lang/String;)V".to_string(), false, Some(Arc::new(thread_set_name_native)))
     }
 
     pub fn getPriority() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "getPriority".to_string(), "()I".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "getPriority".to_string(), "()I".to_string(), false, Some(Arc::new(thread_get_priority_native)))
     }
 
     pub fn setPriority() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "setPriority".to_string(), "(I)V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "setPriority".to_string(), "(I)V".to_string(), false, Some(Arc::new(thread_set_priority_native)))
     }
 
     pub fn getId() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "getId".to_string(), "()J".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "getId".to_string(), "()J".to_string(), false, Some(Arc::new(thread_get_id_native)))
     }
 
     pub fn getState() -> Method {
@@ -507,19 +532,19 @@ impl Thread {
     }
 
     pub fn interrupt() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "interrupt".to_string(), "()V".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "interrupt".to_string(), "()V".to_string(), false, Some(Arc::new(thread_interrupt_native)))
     }
 
     pub fn isInterrupted() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "isInterrupted".to_string(), "()Z".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "isInterrupted".to_string(), "()Z".to_string(), false, Some(Arc::new(thread_is_interrupted_native)))
     }
 
     pub fn interrupted() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "interrupted".to_string(), "()Z".to_string(), true, None)
+        Method::new_native("java.lang.Thread".to_string(), "interrupted".to_string(), "()Z".to_string(), true, Some(Arc::new(thread_interrupted_static_native)))
     }
 
     pub fn isAlive() -> Method {
-        Method::new_native("java.lang.Thread".to_string(), "isAlive".to_string(), "()Z".to_string(), false, None)
+        Method::new_native("java.lang.Thread".to_string(), "isAlive".to_string(), "()Z".to_string(), false, Some(Arc::new(thread_is_alive_native)))
     }
 
     pub fn register(jvm: &mut JVM) {
@@ -540,6 +565,294 @@ impl Thread {
         jvm.method_area.add_native_method("java.lang.Thread", Thread::interrupted());
         jvm.method_area.add_native_method("java.lang.Thread", Thread::isAlive());
     }
+}
+
+// ========== Thread native method implementations ==========
+
+fn thread_start_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        // Get the actual class name of this Thread object
+        let class_name = {
+            let obj = jvm.heap.get(this_id)
+                .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+            obj.class_name.clone()
+        };
+        
+        // Look up run()V method on the actual class, fallback to java.lang.Thread
+        let run_method = jvm.method_area.get_method(&class_name, "run", "()V")
+            .or_else(|| jvm.method_area.get_method("java.lang.Thread", "run", "()V"))
+            .ok_or(JvmError::RuntimeError(RuntimeError::MethodNotFound(class_name.clone(), "run".to_string())))?;
+        
+        let run_method = run_method.clone();
+        
+        // Create a new frame for run()
+        let mut new_frame = Frame::new(run_method);
+        new_frame.set_local(0, Value::ObjectRef(this_id))?;
+        
+        // Create a new thread in the scheduler
+        let thread_name = format!("Thread-{}", jvm.scheduler.thread_count() + 1);
+        let new_thread_id = jvm.scheduler.create_thread(thread_name)?;
+        
+        // Push the frame onto the new thread's stack
+        let mut thread_stack = jvm.scheduler.take_stack(new_thread_id);
+        thread_stack.push(new_frame)?;
+        jvm.scheduler.save_stack(new_thread_id, thread_stack);
+        
+        // Store nativeThreadId on the Java Thread object
+        if let Some(obj) = jvm.heap.get_mut(this_id) {
+            obj.fields.insert("nativeThreadId".to_string(), Value::Int(new_thread_id as i32));
+        }
+        
+        // Register the Java Thread object for currentThread() lookups
+        jvm.thread_objects.insert(new_thread_id, this_id);
+        
+        // Start the thread (add to ready queue)
+        jvm.scheduler.start_thread(new_thread_id)?;
+    }
+    
+    Ok(())
+}
+
+fn thread_run_native(_frame: &mut Frame, _jvm: &mut JVM) -> Result<()> {
+    // Default run() does nothing.
+    // Subclasses that override run() will use their own bytecode.
+    Ok(())
+}
+
+fn thread_sleep_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let millis = frame.get_local(0)?.as_long() as u64;
+    let current_id = jvm.current_thread_id;
+    jvm.scheduler.sleep(current_id, millis)
+}
+
+fn thread_join_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        // Get the native thread ID from the Java Thread object
+        let target_thread_id = {
+            let obj = jvm.heap.get(this_id)
+                .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+            obj.fields.get("nativeThreadId")
+                .and_then(|v| if let Value::Int(id) = v { Some(*id as usize) } else { None })
+                .unwrap_or(0)
+        };
+        
+        if target_thread_id > 0 {
+            jvm.scheduler.join(target_thread_id)?;
+        }
+    }
+    
+    Ok(())
+}
+
+fn thread_yield_native(_frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    jvm.scheduler.yield_thread()
+}
+
+fn thread_current_thread_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let current_id = jvm.current_thread_id;
+    
+    if let Some(&obj_ref) = jvm.thread_objects.get(&current_id) {
+        frame.push(Value::ObjectRef(obj_ref))?;
+    } else {
+        // Main thread might not have a Java Thread object yet
+        frame.push(Value::Null)?;
+    }
+    
+    Ok(())
+}
+
+fn thread_get_name_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        let name = {
+            let obj = jvm.heap.get(this_id)
+                .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+            obj.fields.get("name").cloned()
+        };
+        
+        let name_str = match name {
+            Some(Value::ObjectRef(str_id)) => {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else {
+                    StdString::new()
+                }
+            }
+            _ => StdString::new(),
+        };
+        
+        // Create a Java String object
+        let string_obj = HeapObject::new_string("java.lang.String".to_string(), name_str);
+        let string_ref = jvm.allocate(string_obj)?;
+        frame.push(Value::ObjectRef(string_ref))?;
+    }
+    
+    Ok(())
+}
+
+fn thread_set_name_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    let name_ref = frame.get_local(1)?.clone();
+    
+    if let (Value::ObjectRef(this_id), Value::ObjectRef(name_id)) = (this_ref, name_ref) {
+        if let Some(obj) = jvm.heap.get_mut(this_id) {
+            obj.fields.insert("name".to_string(), Value::ObjectRef(name_id));
+        }
+    }
+    
+    Ok(())
+}
+
+fn thread_get_priority_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    let priority = if let Value::ObjectRef(this_id) = this_ref {
+        let obj = jvm.heap.get(this_id)
+            .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+        obj.fields.get("priority")
+            .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+            .unwrap_or(5)
+    } else {
+        5
+    };
+    
+    frame.push(Value::Int(priority))?;
+    Ok(())
+}
+
+fn thread_set_priority_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    let priority = frame.get_local(1)?.as_int();
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        if let Some(obj) = jvm.heap.get_mut(this_id) {
+            obj.fields.insert("priority".to_string(), Value::Int(priority));
+        }
+    }
+    
+    Ok(())
+}
+
+fn thread_get_id_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    let thread_id = if let Value::ObjectRef(this_id) = this_ref {
+        let obj = jvm.heap.get(this_id)
+            .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+        obj.fields.get("nativeThreadId")
+            .and_then(|v| if let Value::Int(id) = v { Some(*id as i64) } else { None })
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    
+    frame.push(Value::Long(thread_id))?;
+    Ok(())
+}
+
+fn thread_interrupt_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        let obj = jvm.heap.get(this_id)
+            .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+        let native_id = obj.fields.get("nativeThreadId")
+            .and_then(|v| if let Value::Int(id) = v { Some(*id as usize) } else { None });
+        
+        if let Some(native_id) = native_id {
+            if let Some(thread) = jvm.scheduler.get_thread_mut(native_id) {
+                if thread.get_state() == crate::threading::thread::ThreadState::TimedWaiting
+                    || thread.get_state() == crate::threading::thread::ThreadState::Waiting
+                {
+                    thread.set_state(crate::threading::thread::ThreadState::Runnable);
+                }
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+fn thread_is_interrupted_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    let mut is_interrupted = false;
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        let obj = jvm.heap.get(this_id)
+            .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+        is_interrupted = obj.fields.get("interrupted")
+            .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+            .unwrap_or(false);
+    }
+    
+    frame.push(Value::Boolean(is_interrupted))?;
+    Ok(())
+}
+
+fn thread_interrupted_static_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    // Check and clear interrupted flag for current thread
+    let current_id = jvm.current_thread_id;
+    let mut is_interrupted = false;
+    
+    if let Some(&obj_ref) = jvm.thread_objects.get(&current_id) {
+        if let Some(obj) = jvm.heap.get_mut(obj_ref) {
+            is_interrupted = obj.fields.get("interrupted")
+                .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                .unwrap_or(false);
+            obj.fields.insert("interrupted".to_string(), Value::Boolean(false));
+        }
+    }
+    
+    frame.push(Value::Boolean(is_interrupted))?;
+    Ok(())
+}
+
+fn thread_is_alive_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
+    let this_ref = frame.get_local(0)?.clone();
+    let mut is_alive = false;
+    
+    if let Value::ObjectRef(this_id) = this_ref {
+        let obj = jvm.heap.get(this_id)
+            .ok_or(JvmError::RuntimeError(RuntimeError::NullPointerException))?;
+        let native_id = obj.fields.get("nativeThreadId")
+            .and_then(|v| if let Value::Int(id) = v { Some(*id as usize) } else { None });
+        
+        if let Some(native_id) = native_id {
+            is_alive = !jvm.scheduler.is_thread_terminated(native_id);
+        }
+    }
+    
+    frame.push(Value::Boolean(is_alive))?;
+    Ok(())
+}
+
+/// Register the main thread's Java Thread object in the JVM.
+/// Should be called after creating the main Thread object on the heap.
+pub fn register_thread_natives(jvm: &mut JVM) {
+    // Register all native methods (already done by Thread::register)
+    // Create a java.lang.Thread object for the main thread (id=1)
+    let main_thread_obj = HeapObject::new("java.lang.Thread".to_string());
+    let main_thread_ref = match jvm.allocate(main_thread_obj) {
+        Ok(ref_id) => ref_id,
+        Err(_) => return,
+    };
+    
+    // Set fields on the main Thread object
+    if let Some(obj) = jvm.heap.get_mut(main_thread_ref) {
+        obj.fields.insert("nativeThreadId".to_string(), Value::Int(1));
+        obj.fields.insert("priority".to_string(), Value::Int(5));
+        obj.fields.insert("interrupted".to_string(), Value::Boolean(false));
+        obj.fields.insert("daemon".to_string(), Value::Boolean(false));
+        obj.fields.insert("name".to_string(), Value::Null);
+    }
+    
+    // Register the main thread object
+    jvm.thread_objects.insert(1, main_thread_ref);
 }
 
 pub struct Throwable;
@@ -817,7 +1130,7 @@ impl StringBuilder {
                 if let Some(obj) = jvm.heap.get(*this_id) {
                     let s = obj.string_value.clone().unwrap_or_default();
                     let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                    let str_ref = jvm.heap.allocate(str_obj)?;
+                    let str_ref = jvm.allocate(str_obj)?;
                     frame.push(Value::ObjectRef(str_ref))?;
                 }
             }
@@ -907,7 +1220,7 @@ impl Integer {
             if let Value::Int(i) = val {
                 let s = i.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -921,7 +1234,7 @@ impl Integer {
             if let Value::Int(ref i) = val {
                 let mut obj = crate::runtime::heap::HeapObject::new("java.lang.Integer".to_string());
                 obj.fields.insert("value:I".to_string(), Value::Int(*i));
-                let obj_ref = jvm.heap.allocate(obj)?;
+                let obj_ref = jvm.allocate(obj)?;
                 frame.push(Value::ObjectRef(obj_ref))?;
             }
             Ok(())
@@ -945,7 +1258,7 @@ impl Integer {
                                 None
                             );
                             let obj = crate::runtime::heap::HeapObject::new("java.lang.Integer".to_string());
-                            let obj_ref = jvm.heap.allocate(obj)?;
+                            let obj_ref = jvm.allocate(obj)?;
                             frame.push(Value::ObjectRef(obj_ref))?;
                             return Ok(());
                         }
@@ -963,7 +1276,7 @@ impl Integer {
             if let Value::Int(i) = val {
                 let s = i.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -977,7 +1290,7 @@ impl Integer {
             if let Value::Int(i) = val {
                 let s = format!("{:x}", i);
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -1072,7 +1385,7 @@ impl Long {
                     if let Some(s) = &str_obj.string_value {
                         if let Ok(v) = s.parse::<i64>() {
                             let obj = crate::runtime::heap::HeapObject::new("java.lang.Long".to_string());
-                            let obj_ref = jvm.heap.allocate(obj)?;
+                            let obj_ref = jvm.allocate(obj)?;
                             frame.push(Value::ObjectRef(obj_ref))?;
                             return Ok(());
                         }
@@ -1090,7 +1403,7 @@ impl Long {
             if let Value::Long(l) = val {
                 let s = l.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -1163,7 +1476,7 @@ impl Double {
                     if let Some(s) = &str_obj.string_value {
                         if let Ok(v) = s.parse::<f64>() {
                             let obj = crate::runtime::heap::HeapObject::new("java.lang.Double".to_string());
-                            let obj_ref = jvm.heap.allocate(obj)?;
+                            let obj_ref = jvm.allocate(obj)?;
                             frame.push(Value::ObjectRef(obj_ref))?;
                             return Ok(());
                         }
@@ -1181,7 +1494,7 @@ impl Double {
             if let Value::Double(d) = val {
                 let s = d.to_string();
                 let str_obj = crate::runtime::heap::HeapObject::new_string("java.lang.String".to_string(), s);
-                let str_ref = jvm.heap.allocate(str_obj)?;
+                let str_ref = jvm.allocate(str_obj)?;
                 frame.push(Value::ObjectRef(str_ref))?;
             }
             Ok(())
@@ -1352,13 +1665,253 @@ impl Record {
     }
 }
 
+// ========== java.lang.Class ==========
+
+pub struct Class;
+
+impl Class {
+    pub fn getName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(class_id) = this_ref {
+                if let Some(class_obj) = jvm.heap.get(*class_id) {
+                    let name_val = class_obj.fields.get("name").cloned();
+                    if let Some(Value::ObjectRef(name_ref)) = name_val {
+                        if let Some(name_obj) = jvm.heap.get(name_ref) {
+                            if let Some(name) = &name_obj.string_value {
+                                let str_obj = HeapObject::new_string("java.lang.String".to_string(), name.clone());
+                                let str_ref = jvm.allocate(str_obj)?;
+                                frame.push(Value::ObjectRef(str_ref))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Class".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn forName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let name_ref = frame.pop()?;
+            if let Value::ObjectRef(str_id) = name_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    if let Some(class_name) = &str_obj.string_value {
+                        if jvm.method_area.has_class(class_name) {
+                            let mut class_obj = HeapObject::new("java.lang.Class".to_string());
+                            let name_obj = HeapObject::new_string("java.lang.String".to_string(), class_name.clone());
+                            let name_ref_id = jvm.allocate(name_obj)?;
+                            class_obj.fields.insert("name".to_string(), Value::ObjectRef(name_ref_id));
+                            let class_ref = jvm.allocate(class_obj)?;
+                            frame.push(Value::ObjectRef(class_ref))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Class".to_string(), "forName".to_string(), "(Ljava/lang/String;)Ljava/lang/Class;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn getSimpleName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(class_id) = this_ref {
+                if let Some(class_obj) = jvm.heap.get(*class_id) {
+                    let name_val = class_obj.fields.get("name").cloned();
+                    if let Some(Value::ObjectRef(name_ref)) = name_val {
+                        if let Some(name_obj) = jvm.heap.get(name_ref) {
+                            if let Some(full_name) = &name_obj.string_value {
+                                let simple_name = full_name.rsplit('.').next().unwrap_or(full_name);
+                                let str_obj = HeapObject::new_string("java.lang.String".to_string(), simple_name.to_string());
+                                let str_ref = jvm.allocate(str_obj)?;
+                                frame.push(Value::ObjectRef(str_ref))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Class".to_string(), "getSimpleName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn desiredAssertionStatus() -> Method {
+        Method::new_native("java.lang.Class".to_string(), "desiredAssertionStatus".to_string(), "()Z".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Class", Class::getName());
+        jvm.method_area.add_native_method("java.lang.Class", Class::forName());
+        jvm.method_area.add_native_method("java.lang.Class", Class::getSimpleName());
+        jvm.method_area.add_native_method("java.lang.Class", Class::desiredAssertionStatus());
+    }
+}
+
+// ========== java.lang.Runnable ==========
+
+pub struct Runnable;
+
+impl Runnable {
+    pub fn register(jvm: &mut JVM) {
+        // Runnable is an interface with a single run() method.
+        // The method is abstract (no code), so we register a native no-op
+        // to satisfy method resolution when Thread calls target.run().
+        let run_method = Method::new_native(
+            "java.lang.Runnable".to_string(),
+            "run".to_string(),
+            "()V".to_string(),
+            false,
+            Some(Arc::new(|_frame, _jvm| Ok(())))
+        );
+        jvm.method_area.add_native_method("java.lang.Runnable", run_method);
+    }
+}
+
+// ========== java.lang.Float ==========
+
+pub struct Float;
+
+impl Float {
+    pub fn parseFloat() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.pop()?;
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<f32>() {
+                            frame.push(Value::Float(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Float(0.0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Float".to_string(), "parseFloat".to_string(), "(Ljava/lang/String;)F".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf_float() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            if let Value::Float(f) = val {
+                let obj = HeapObject::new("java.lang.Float".to_string());
+                let mut obj = obj;
+                obj.fields.insert("value:F".to_string(), Value::Float(f));
+                let obj_ref = jvm.allocate(obj)?;
+                frame.push(Value::ObjectRef(obj_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Float".to_string(), "valueOf".to_string(), "(F)Ljava/lang/Float;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            let s = match val {
+                Value::Float(f) => f.to_string(),
+                _ => "0.0".to_string(),
+            };
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+            let str_ref = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(str_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Float".to_string(), "toString".to_string(), "(F)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn floatValue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(obj_id) = this_ref {
+                // Simplified: return 0.0f for now
+                frame.push(Value::Float(0.0))?;
+            } else {
+                frame.push(Value::Float(0.0))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Float".to_string(), "floatValue".to_string(), "()F".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Float", Float::parseFloat());
+        jvm.method_area.add_native_method("java.lang.Float", Float::valueOf_float());
+        jvm.method_area.add_native_method("java.lang.Float", Float::toString());
+        jvm.method_area.add_native_method("java.lang.Float", Float::floatValue());
+    }
+}
+
+// ========== java.lang.Boolean ==========
+
+pub struct Boolean;
+
+impl Boolean {
+    pub fn parseBoolean() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let str_ref = frame.pop()?;
+            let result = if let Value::ObjectRef(str_id) = str_ref {
+                // Simplified: just check if the string is "true"
+                true
+            } else {
+                false
+            };
+            frame.push(Value::Boolean(result))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Boolean".to_string(), "parseBoolean".to_string(), "(Ljava/lang/String;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn booleanValue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Boolean(false))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Boolean".to_string(), "booleanValue".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            let s = match val {
+                Value::Boolean(b) => b.to_string(),
+                _ => "false".to_string(),
+            };
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+            let str_ref = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(str_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Boolean".to_string(), "toString".to_string(), "(Z)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Boolean", Boolean::parseBoolean());
+        jvm.method_area.add_native_method("java.lang.Boolean", Boolean::booleanValue());
+        jvm.method_area.add_native_method("java.lang.Boolean", Boolean::toString());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
+    Class::register(jvm);
+    Runnable::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);
     Long::register(jvm);
+    Float::register(jvm);
+    Boolean::register(jvm);
     Double::register(jvm);
     Math::register(jvm);
     System::register(jvm);

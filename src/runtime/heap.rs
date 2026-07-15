@@ -158,3 +158,92 @@ impl Heap {
         self.objects.iter().filter(|e| e.is_some()).count()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_heap_allocate() {
+        let mut heap = Heap::new();
+        let obj = HeapObject::new("java.lang.Object".to_string());
+        let id = heap.allocate(obj).unwrap();
+        assert!(id > 0);
+        assert!(heap.get(id).is_some());
+    }
+
+    #[test]
+    fn test_heap_get_mut() {
+        let mut heap = Heap::new();
+        let obj = HeapObject::new("java.lang.Object".to_string());
+        let id = heap.allocate(obj).unwrap();
+        let obj_mut = heap.get_mut(id).unwrap();
+        obj_mut.class_name = "Modified".to_string();
+        assert_eq!(heap.get(id).unwrap().class_name, "Modified");
+    }
+
+    #[test]
+    fn test_heap_deallocate() {
+        let mut heap = Heap::new();
+        let obj = HeapObject::new("java.lang.Object".to_string());
+        let id = heap.allocate(obj).unwrap();
+        heap.deallocate(id).unwrap();
+        assert!(heap.get(id).is_none());
+    }
+
+    #[test]
+    fn test_heap_get_null() {
+        let heap = Heap::new();
+        assert!(heap.get(0).is_none());
+    }
+
+    #[test]
+    fn test_heap_allocated_count() {
+        let mut heap = Heap::new();
+        assert_eq!(heap.allocated_count(), 0);
+        heap.allocate(HeapObject::new("A".to_string())).unwrap();
+        heap.allocate(HeapObject::new("B".to_string())).unwrap();
+        assert_eq!(heap.allocated_count(), 2);
+    }
+
+    #[test]
+    fn test_heap_object_new_string() {
+        let obj = HeapObject::new_string("java.lang.String".to_string(), "hello".to_string());
+        assert_eq!(obj.string_value, Some("hello".to_string()));
+        assert!(!obj.is_array());
+        assert!(obj.is_string());
+    }
+
+    #[test]
+    fn test_heap_object_new_array() {
+        let mut obj = HeapObject::new_array("java.lang.Object".to_string(), 5);
+        assert_eq!(obj.array_length, 5);
+        assert!(obj.is_array());
+        assert!(!obj.is_string());
+        obj.set_array_element(0, Value::Int(42)).unwrap();
+        assert_eq!(*obj.get_array_element(0).unwrap(), Value::Int(42));
+    }
+
+    #[test]
+    fn test_heap_object_fields() {
+        let mut obj = HeapObject::new("java.lang.Point".to_string());
+        obj.set_field("x", Value::Int(10));
+        obj.set_field("y", Value::Int(20));
+        assert_eq!(*obj.get_field("x").unwrap(), Value::Int(10));
+        assert_eq!(*obj.get_field("y").unwrap(), Value::Int(20));
+    }
+
+    #[test]
+    fn test_array_out_of_bounds() {
+        let mut obj = HeapObject::new_array("[I".to_string(), 3);
+        assert!(obj.set_array_element(10, Value::Int(0)).is_err());
+        assert!(obj.get_array_element(10).is_err());
+    }
+
+    #[test]
+    fn test_deallocate_invalid_id() {
+        let mut heap = Heap::new();
+        assert!(heap.deallocate(0).is_err());
+        assert!(heap.deallocate(999).is_err());
+    }
+}

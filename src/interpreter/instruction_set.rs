@@ -169,6 +169,10 @@ impl InstructionSet {
         handlers.insert(0xA5, handle_if_acmpeq);
         handlers.insert(0xA6, handle_if_acmpne);
         handlers.insert(0xA7, handle_goto);
+        handlers.insert(0xA8, handle_jsr);
+        handlers.insert(0xA9, handle_ret);
+        handlers.insert(0xAA, handle_tableswitch);
+        handlers.insert(0xAB, handle_lookupswitch);
         handlers.insert(0xAC, handle_ireturn);
         handlers.insert(0xAD, handle_lreturn);
         handlers.insert(0xAE, handle_freturn);
@@ -185,6 +189,7 @@ impl InstructionSet {
         handlers.insert(0xB9, handle_invokeinterface);
         handlers.insert(0xBA, handle_invokedynamic);
         handlers.insert(0xC8, handle_goto_w);
+        handlers.insert(0xC9, handle_jsr_w);
         handlers.insert(0xBB, handle_new);
         handlers.insert(0xBC, handle_newarray);
         handlers.insert(0xBD, handle_anewarray);
@@ -312,7 +317,7 @@ fn handle_ldc(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
             let s = cp.get_utf8(*utf8_index)
                 .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(*utf8_index)))?;
             let obj = HeapObject::new_string("java.lang.String".to_string(), s);
-            let ref_id = jvm.heap.allocate(obj)?;
+            let ref_id = jvm.allocate(obj)?;
             frame.push(Value::ObjectRef(ref_id))?;
         }
         _ => return Err(JvmError::InterpreterError(InterpreterError::InvalidInstructionFormat(frame.pc))),
@@ -339,7 +344,7 @@ fn handle_ldc_w(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
             let s = cp.get_utf8(*utf8_index)
                 .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(*utf8_index)))?;
             let obj = HeapObject::new_string("java.lang.String".to_string(), s);
-            let ref_id = jvm.heap.allocate(obj)?;
+            let ref_id = jvm.allocate(obj)?;
             frame.push(Value::ObjectRef(ref_id))?;
         }
         _ => return Err(JvmError::InterpreterError(InterpreterError::InvalidInstructionFormat(frame.pc))),
@@ -1518,6 +1523,113 @@ fn handle_goto(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     Ok(0)
 }
 
+fn handle_jsr(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    // Jump to subroutine: push return address (PC of next instruction) onto operand stack
+    let code = &frame.method.code;
+    let offset = i16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as i32;
+    let return_addr = frame.pc + 3; // Address of the instruction after jsr
+    frame.push(Value::Int(return_addr as i32))?;
+    frame.pc = (frame.pc as i32 + offset) as usize;
+    Ok(0)
+}
+
+fn handle_ret(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    // Return from subroutine: jump to return address stored in local variable
+    let code = &frame.method.code;
+    let local_index = code[frame.pc + 1] as usize;
+    if let Ok(ret_addr) = frame.get_local(local_index) {
+        if let Value::Int(addr) = ret_addr {
+            frame.pc = *addr as usize;
+            return Ok(0);
+        }
+    }
+    // Fallback: if ret address is invalid, end the method
+    frame.pc = frame.method.code.len();
+    Ok(0)
+}
+
+fn handle_tableswitch(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    // Copy the code bytes to avoid borrow conflicts with frame.pop()
+    let code = frame.method.code.clone();
+    let pc = frame.pc;
+    // Align to 4-byte boundary after opcode
+    let mut offset = pc + 1;
+    while offset % 4 != 0 {
+        offset += 1;
+    }
+    // Read default offset
+    let default = i32::from_be_bytes([
+        code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+    ]);
+    offset += 4;
+    // Read low value
+    let low = i32::from_be_bytes([
+        code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+    ]);
+    offset += 4;
+    // Read high value
+    let high = i32::from_be_bytes([
+        code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+    ]);
+    offset += 4;
+    // Read the key from the operand stack
+    let key = frame.pop()?.as_int();
+    let target = if key >= low && key <= high {
+        let index = (key - low) as usize;
+        let jump_offset = i32::from_be_bytes([
+            code[offset + index * 4],
+            code[offset + index * 4 + 1],
+            code[offset + index * 4 + 2],
+            code[offset + index * 4 + 3],
+        ]);
+        (pc as i32) + jump_offset
+    } else {
+        (pc as i32) + default
+    };
+    frame.pc = target as usize;
+    Ok(0)
+}
+
+fn handle_lookupswitch(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    // Copy the code bytes to avoid borrow conflicts with frame.pop()
+    let code = frame.method.code.clone();
+    let pc = frame.pc;
+    // Align to 4-byte boundary after opcode
+    let mut offset = pc + 1;
+    while offset % 4 != 0 {
+        offset += 1;
+    }
+    // Read default offset
+    let default = i32::from_be_bytes([
+        code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+    ]);
+    offset += 4;
+    // Read number of pairs
+    let npairs = i32::from_be_bytes([
+        code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+    ]);
+    offset += 4;
+    // Read the key from the operand stack
+    let key = frame.pop()?.as_int();
+    // Search for matching key
+    let mut target = (pc as i32) + default;
+    for _ in 0..npairs {
+        let match_key = i32::from_be_bytes([
+            code[offset], code[offset + 1], code[offset + 2], code[offset + 3]
+        ]);
+        let match_offset = i32::from_be_bytes([
+            code[offset + 4], code[offset + 5], code[offset + 6], code[offset + 7]
+        ]);
+        if match_key == key {
+            target = (pc as i32) + match_offset;
+            break;
+        }
+        offset += 8;
+    }
+    frame.pc = target as usize;
+    Ok(0)
+}
+
 fn handle_ireturn(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     frame.return_value = Some(frame.pop()?);
     frame.pc = frame.method.code.len();
@@ -1909,7 +2021,7 @@ fn handle_invokedynamic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
                             }
                             
                             let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
-                            let result_ref = jvm.heap.allocate(result_obj)?;
+                            let result_ref = jvm.allocate(result_obj)?;
                             frame.push(Value::ObjectRef(result_ref))?;
                             
                             frame.pc += 5;
@@ -1933,6 +2045,16 @@ fn handle_goto_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
     Ok(0)
 }
 
+fn handle_jsr_w(frame: &mut Frame, _jvm: &mut JVM) -> Result<usize> {
+    // Wide jump to subroutine: push return address and jump with 4-byte offset
+    let code = &frame.method.code;
+    let offset = i32::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2], code[frame.pc + 3], code[frame.pc + 4]]);
+    let return_addr = frame.pc + 5; // Address of the instruction after jsr_w
+    frame.push(Value::Int(return_addr as i32))?;
+    frame.pc = (frame.pc as i32 + offset) as usize;
+    Ok(0)
+}
+
 fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let code = &frame.method.code;
     let index = u16::from_be_bytes([code[frame.pc + 1], code[frame.pc + 2]]) as usize;
@@ -1950,7 +2072,7 @@ fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         obj.fields.insert(field_key.clone(), Value::Null);
     }
     
-    let ref_id = jvm.heap.allocate(obj)?;
+    let ref_id = jvm.allocate(obj)?;
     frame.push(Value::ObjectRef(ref_id))?;
     
     Ok(3)
@@ -1978,7 +2100,7 @@ fn handle_newarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     };
     
     let obj = HeapObject::new_array(class_name, length);
-    let ref_id = jvm.heap.allocate(obj)?;
+    let ref_id = jvm.allocate(obj)?;
     frame.push(Value::ArrayRef(ref_id))?;
     
     Ok(2)
@@ -1999,7 +2121,7 @@ fn handle_anewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     }
     
     let obj = HeapObject::new_array(format!("[L{};", class_name.replace('/', ".")), length);
-    let ref_id = jvm.heap.allocate(obj)?;
+    let ref_id = jvm.allocate(obj)?;
     frame.push(Value::ArrayRef(ref_id))?;
     
     Ok(3)
@@ -2169,7 +2291,7 @@ fn handle_monitorenter(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     match obj_ref {
         Value::ObjectRef(obj_id) => {
             if let Some(obj) = jvm.heap.get_mut(obj_id) {
-                let current_thread_id = 1;
+                let current_thread_id = jvm.current_thread_id;
                 
                 match obj.monitor_owner {
                     None => {
@@ -2180,6 +2302,7 @@ fn handle_monitorenter(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
                         obj.monitor_count += 1;
                     }
                     Some(_) => {
+                        // Thread blocks — yield to scheduler
                         return Err(JvmError::ThreadingError(ThreadingError::IllegalMonitorState));
                     }
                 }
@@ -2198,7 +2321,7 @@ fn handle_monitorexit(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     match obj_ref {
         Value::ObjectRef(obj_id) => {
             if let Some(obj) = jvm.heap.get_mut(obj_id) {
-                let current_thread_id = 1;
+                let current_thread_id = jvm.current_thread_id;
                 
                 match obj.monitor_owner {
                     Some(owner) if owner == current_thread_id => {
@@ -2235,7 +2358,7 @@ fn handle_multianewarray(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     }
     
     let obj = HeapObject::new_array(class_name, length);
-    let ref_id = jvm.heap.allocate(obj)?;
+    let ref_id = jvm.allocate(obj)?;
     frame.push(Value::ArrayRef(ref_id))?;
     
     Ok(4)

@@ -141,7 +141,7 @@ impl Frame {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct JvmStack {
     frames: Vec<Frame>,
     max_depth: usize,
@@ -186,5 +186,148 @@ impl JvmStack {
 
     pub fn get_frames(&self) -> &[Frame] {
         &self.frames
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::method_area::Method;
+
+    fn dummy_method() -> Method {
+        Method {
+            class_name: "Test".to_string(),
+            name: "test".to_string(),
+            descriptor: "()V".to_string(),
+            code: vec![],
+            max_stack: 10,
+            max_locals: 10,
+            is_native: false,
+            is_static: true,
+            native_impl: None,
+        }
+    }
+
+    #[test]
+    fn test_frame_new() {
+        let method = dummy_method();
+        let frame = Frame::new(method);
+        assert_eq!(frame.local_variables.len(), 10);
+        assert!(frame.operand_stack.is_empty());
+        assert_eq!(frame.pc, 0);
+        assert!(frame.exception.is_none());
+        assert!(frame.return_value.is_none());
+    }
+
+    #[test]
+    fn test_frame_push_pop() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.push(Value::Int(1)).unwrap();
+        frame.push(Value::Int(2)).unwrap();
+        assert_eq!(frame.operand_stack_size(), 2);
+        assert_eq!(frame.pop().unwrap(), Value::Int(2));
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+    }
+
+    #[test]
+    fn test_frame_peek() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.push(Value::Int(42)).unwrap();
+        assert_eq!(*frame.peek().unwrap(), Value::Int(42));
+        assert_eq!(frame.operand_stack_size(), 1);
+    }
+
+    #[test]
+    fn test_frame_dup() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.push(Value::Int(1)).unwrap();
+        frame.dup().unwrap();
+        assert_eq!(frame.operand_stack_size(), 2);
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+    }
+
+    #[test]
+    fn test_frame_dup_x1() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.push(Value::Int(2)).unwrap();
+        frame.push(Value::Int(1)).unwrap();
+        frame.dup_x1().unwrap();
+        // Stack should be: 1, 2, 1
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+        assert_eq!(frame.pop().unwrap(), Value::Int(2));
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+    }
+
+    #[test]
+    fn test_frame_swap() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.push(Value::Int(1)).unwrap();
+        frame.push(Value::Int(2)).unwrap();
+        frame.swap().unwrap();
+        assert_eq!(frame.pop().unwrap(), Value::Int(1));
+        assert_eq!(frame.pop().unwrap(), Value::Int(2));
+    }
+
+    #[test]
+    fn test_local_variables() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        frame.set_local(0, Value::Int(42)).unwrap();
+        frame.set_local(5, Value::Long(100)).unwrap();
+        assert_eq!(*frame.get_local(0).unwrap(), Value::Int(42));
+        assert_eq!(*frame.get_local(5).unwrap(), Value::Long(100));
+    }
+
+    #[test]
+    fn test_frame_pop_underflow() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        assert!(frame.pop().is_err());
+    }
+
+    #[test]
+    fn test_local_out_of_bounds() {
+        let method = dummy_method();
+        let mut frame = Frame::new(method);
+        assert!(frame.get_local(100).is_err());
+        assert!(frame.set_local(100, Value::Int(0)).is_err());
+    }
+
+    #[test]
+    fn test_jvm_stack_push_pop() {
+        let mut stack = JvmStack::new();
+        let method = dummy_method();
+        let frame = Frame::new(method);
+        stack.push(frame).unwrap();
+        assert_eq!(stack.depth(), 1);
+        assert!(!stack.is_empty());
+        let _ = stack.pop().unwrap();
+        assert!(stack.is_empty());
+    }
+
+    #[test]
+    fn test_jvm_stack_overflow() {
+        let mut stack = JvmStack::new();
+        // Create many frames to overflow the stack
+        for _ in 0..1100 {
+            let method = dummy_method();
+            let frame = Frame::new(method);
+            if stack.push(frame).is_err() {
+                return; // Expected overflow
+            }
+        }
+        panic!("Should have overflowed");
+    }
+
+    #[test]
+    fn test_jvm_stack_underflow() {
+        let mut stack = JvmStack::new();
+        assert!(stack.pop().is_err());
     }
 }

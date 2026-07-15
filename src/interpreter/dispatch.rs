@@ -1,21 +1,88 @@
 use crate::error::{InterpreterError, RuntimeError, JvmError, Result};
 use crate::runtime::{JVM, Frame, Value};
+use crate::threading::thread::ThreadState;
 use super::instruction_set::InstructionSet;
 
 pub struct Interpreter {
     instruction_set: InstructionSet,
+    max_instructions_per_tick: usize,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
             instruction_set: InstructionSet::new(),
+            max_instructions_per_tick: 10000,
         }
     }
 
-    pub fn run(&self, jvm: &mut JVM) -> Result<()> {
+    /// Run the interpreter for a single thread until its stack is empty (thread terminates).
+    pub fn run(&self, jvm: &mut JVM, thread_id: usize) -> Result<()> {
+        jvm.load_thread_stack(thread_id);
+        
+        self.run_inner(jvm, usize::MAX)?;
+        
+        // Mark thread as terminated
+        jvm.scheduler.set_thread_terminated(thread_id);
+        jvm.save_current_stack();
+        
+        Ok(())
+    }
+
+    /// Run the interpreter for a single thread for up to `max_instructions` instructions,
+    /// then save the stack and return. Used for multi-threaded scheduling.
+    pub fn run_tick(&self, jvm: &mut JVM, thread_id: usize) -> Result<()> {
+        jvm.load_thread_stack(thread_id);
+        
+        self.run_inner(jvm, self.max_instructions_per_tick)?;
+        
+        jvm.save_current_stack();
+        Ok(())
+    }
+
+    /// Main scheduling loop — runs all threads cooperatively.
+    pub fn run_multi(&self, jvm: &mut JVM) -> Result<()> {
+        loop {
+            // Schedule the next thread
+            let thread_id = match jvm.scheduler.schedule() {
+                Some(id) => id,
+                None => break, // No runnable threads
+            };
+            
+            // Run this thread for a tick
+            self.run_tick(jvm, thread_id)?;
+            
+            // Check if the thread is still runnable; if terminated, remove from ready queue
+            if jvm.scheduler.is_thread_terminated(thread_id) {
+                // Thread is done, try next one
+                continue;
+            }
+            
+            // Re-add to ready queue for next scheduling cycle
+            let thread = jvm.scheduler.get_thread(thread_id);
+            let is_runnable = thread.map(|t| t.get_state() == ThreadState::Runnable).unwrap_or(false);
+            if !is_runnable {
+                // Thread is blocked/waiting, don't re-add
+                continue;
+            }
+            
+            // Yield the thread (re-add to ready queue)
+            let _ = jvm.scheduler.yield_thread();
+        }
+        
+        Ok(())
+    }
+
+    /// Inner interpreter loop, runs for at most `max_instructions` instructions.
+    fn run_inner(&self, jvm: &mut JVM, max_instructions: usize) -> Result<()> {
+        let mut instruction_count = 0usize;
+        
         loop {
             if jvm.stack.is_empty() {
+                break;
+            }
+            
+            if instruction_count >= max_instructions {
                 break;
             }
             
@@ -47,6 +114,7 @@ impl Interpreter {
                     jvm.stack.push(caller_frame)?;
                 }
                 
+                instruction_count += 1;
                 continue;
             }
 
@@ -72,6 +140,7 @@ impl Interpreter {
                         jvm.stack.push(caller_frame)?;
                     }
                 }
+                instruction_count += 1;
                 continue;
             }
 
@@ -85,9 +154,14 @@ impl Interpreter {
             match result {
                 Ok(pc_increment) => {
                     if is_call {
+                        // Call handlers (invokevirtual, invokespecial, etc.) already push
+                        // the caller frame back. Only push it here if the handler didn't
+                        // (e.g. invokedynamic which processes inline).
                         if jvm.stack.is_empty() {
                             jvm.stack.push(frame)?;
                         }
+                        // The handler already advanced the PC and pushed the caller frame.
+                        // Do not apply pc_increment here — the handler did it.
                         continue;
                     }
                     
@@ -126,6 +200,8 @@ impl Interpreter {
                     }
                 }
             }
+            
+            instruction_count += 1;
         }
 
         Ok(())
@@ -216,7 +292,7 @@ impl Interpreter {
             obj.fields.insert(field_key.clone(), Value::Null);
         }
         
-        let ref_id = jvm.heap.allocate(obj).ok()?;
+        let ref_id = jvm.allocate(obj).ok()?;
         Some(Value::ObjectRef(ref_id))
     }
 }

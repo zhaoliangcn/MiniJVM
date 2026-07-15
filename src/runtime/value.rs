@@ -126,3 +126,83 @@ impl Value {
             | Value::Byte(_) | Value::Short(_) | Value::Char(_) | Value::Boolean(_))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_value_int() {
+        let v = Value::Int(42);
+        assert_eq!(v.as_int(), 42);
+        assert!(v.is_numeric());
+        assert!(!v.is_null());
+        assert!(!v.is_reference());
+    }
+
+    #[test]
+    fn test_value_long() {
+        let v = Value::Long(100);
+        assert_eq!(v.as_long(), 100);
+        assert_eq!(v.as_int(), 100);
+    }
+
+    #[test]
+    fn test_value_float() {
+        let v = Value::Float(3.14);
+        assert!((v.as_float() - 3.14).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_value_double() {
+        let v = Value::Double(2.71);
+        assert!((v.as_double() - 2.71).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_value_null() {
+        let v = Value::Null;
+        assert!(v.is_null());
+        assert!(v.is_reference());
+    }
+
+    #[test]
+    fn test_value_object_ref() {
+        let v = Value::ObjectRef(5);
+        assert_eq!(v.as_ref(), 5);
+        assert!(v.is_reference());
+        assert!(!v.is_null());
+    }
+
+    #[test]
+    fn test_value_boolean() {
+        let v = Value::Boolean(true);
+        assert!(v.as_bool());
+        assert_eq!(v.as_int(), 1);
+    }
+
+    #[test]
+    fn test_value_byte() {
+        let v = Value::Byte(127);
+        assert_eq!(v.as_int(), 127);
+    }
+
+    #[test]
+    fn test_value_short() {
+        let v = Value::Short(-32768);
+        assert_eq!(v.as_int(), -32768);
+    }
+
+    #[test]
+    fn test_value_char() {
+        let v = Value::Char(65);
+        assert_eq!(v.as_int(), 65);
+    }
+
+    #[test]
+    fn test_value_type_conversions() {
+        // Long to Int truncation
+        let v = Value::Long(0x1_0000_0000);
+        assert_eq!(v.as_int(), 0);
+    }
+}

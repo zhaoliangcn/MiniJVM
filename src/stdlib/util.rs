@@ -1276,6 +1276,7 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::indexOfSubList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::lastIndexOfSubList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::rotate());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::swap());
     }
 }
 
@@ -1986,6 +1987,30 @@ impl Collections {
         });
         Method::new_native("java.util.Collections".to_string(), "rotate".to_string(), "(Ljava/util/List;I)V".to_string(), true, Some(native_impl))
     }
+
+    pub fn swap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let j = frame.pop()?.as_int() as usize;
+            let i = frame.pop()?.as_int() as usize;
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            if i < elements.len() && j < elements.len() {
+                                elements.swap(i, j);
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "swap".to_string(), "(Ljava/util/List;II)V".to_string(), true, Some(native_impl))
+    }
 }
 
 /// Helper: get a sort-friendly hash from a Value
@@ -2127,6 +2152,7 @@ impl Objects {
         jvm.method_area.add_native_method("java.util.Objects", Objects::hash());
         jvm.method_area.add_native_method("java.util.Objects", Objects::toString());
         jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNull());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::compare());
     }
 }
 
@@ -2169,6 +2195,19 @@ impl Objects {
             Ok(())
         });
         Method::new_native("java.util.Objects".to_string(), "hash".to_string(), "([Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn compare() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let c = frame.pop()?; // Comparator
+            let b = frame.pop()?;
+            let a = frame.pop()?;
+            // Simple comparison by hash value
+            let result = if a == b { 0 } else { hash_for_sort(&a).cmp(&hash_for_sort(&b)) as i32 };
+            frame.push(Value::Int(result))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "compare".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/Comparator;)I".to_string(), true, Some(native_impl))
     }
 }
 

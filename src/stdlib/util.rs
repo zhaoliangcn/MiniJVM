@@ -1421,6 +1421,7 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::rotate());
         jvm.method_area.add_native_method("java.util.Collections", Collections::swap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::asLifoQueue());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::copy());
     }
 }
 
@@ -2180,6 +2181,55 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "asLifoQueue".to_string(), "(Ljava/util/Deque;)Ljava/util/Queue;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn copy() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let dest_ref = frame.pop()?;
+            let src_ref = frame.pop()?;
+            // Extract source data first
+            let (src_arr, src_size) = if let Value::ObjectRef(src_id) = &src_ref {
+                if let Some(src_obj) = jvm.heap.get(*src_id) {
+                    let a = src_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let s = src_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a, s)
+                } else { (0, 0) }
+            } else { (0, 0) };
+            // Copy source elements to a Vec first
+            let mut src_elems = Vec::new();
+            if let Some(src_arr_obj) = jvm.heap.get(src_arr) {
+                if let Some(elems) = &src_arr_obj.array_elements {
+                    for i in 0..src_size.min(elems.len()) {
+                        src_elems.push(elems[i].clone());
+                    }
+                }
+            }
+            // Now update the destination
+            if let Value::ObjectRef(dest_id) = &dest_ref {
+                // Extract dest_arr first
+                let dest_arr = if let Some(dest_obj) = jvm.heap.get(*dest_id) {
+                    dest_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0)
+                } else { 0 };
+                if let Some(dest_arr_obj) = jvm.heap.get_mut(dest_arr) {
+                    if let Some(dest_elems) = &mut dest_arr_obj.array_elements {
+                        for i in 0..src_elems.len().min(dest_elems.len()) {
+                            dest_elems[i] = src_elems[i].clone();
+                        }
+                    }
+                }
+                if let Some(dest_obj) = jvm.heap.get_mut(*dest_id) {
+                    dest_obj.fields.insert("size".to_string(), Value::Int(src_size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "copy".to_string(), "(Ljava/util/List;Ljava/util/List;)V".to_string(), true, Some(native_impl))
     }
 }
 
@@ -3905,6 +3955,29 @@ impl Comparator {
 
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.Comparator", Comparator::compare());
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::naturalOrder());
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::reverseOrder());
+    }
+}
+
+impl Comparator {
+    pub fn naturalOrder() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            // Return a comparator object that uses natural ordering
+            let comp = HeapObject::new("java.util.Comparator".to_string());
+            // We push the comparator but it's a placeholder - native methods handle comparison
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "naturalOrder".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn reverseOrder() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "reverseOrder".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
     }
 }
 

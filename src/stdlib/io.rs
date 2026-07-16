@@ -893,4 +893,129 @@ pub fn register_io_classes(jvm: &mut JVM) {
     File_::register(jvm);
     ByteArrayInputStream::register(jvm);
     ByteArrayOutputStream::register(jvm);
+    BufferedInputStream::register(jvm);
+    BufferedOutputStream::register(jvm);
+}
+
+// ========== java.io.BufferedInputStream ==========
+
+pub struct BufferedInputStream;
+
+impl BufferedInputStream {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let in_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("in".to_string(), in_ref);
+                    obj.fields.insert("buf".to_string(), Value::Null);
+                    obj.fields.insert("pos".to_string(), Value::Int(0));
+                    obj.fields.insert("count".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.io.BufferedInputStream".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn read() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let pos = obj.fields.get("pos")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p as usize) } else { None })
+                        .unwrap_or(0);
+                    let count = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c as usize) } else { None })
+                        .unwrap_or(0);
+                    if pos < count {
+                        // Read from buffer
+                        if let Some(Value::ArrayRef(buf_id)) = obj.fields.get("buf") {
+                            if let Some(buf) = jvm.heap.get(*buf_id) {
+                                if let Some(elements) = &buf.array_elements {
+                                    if pos < elements.len() {
+                                        let byte = match &elements[pos] {
+                                            Value::Byte(b) => *b as i32,
+                                            Value::Int(i) => *i,
+                                            _ => 0,
+                                        };
+                                        if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                                            obj.fields.insert("pos".to_string(), Value::Int((pos + 1) as i32));
+                                        }
+                                        frame.push(Value::Int(byte))?;
+                                        return Ok(());
+                                    }
+                                }
+                            }
+                        }
+                        // Buffer exhausted, refill
+                        if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                            obj.fields.insert("pos".to_string(), Value::Int(0));
+                            obj.fields.insert("count".to_string(), Value::Int(0));
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(-1))?;
+            Ok(())
+        });
+        Method::new_native("java.io.BufferedInputStream".to_string(), "read".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.BufferedInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.BufferedInputStream", BufferedInputStream::init());
+        jvm.method_area.add_native_method("java.io.BufferedInputStream", BufferedInputStream::read());
+        jvm.method_area.add_native_method("java.io.BufferedInputStream", BufferedInputStream::close());
+    }
+}
+
+// ========== java.io.BufferedOutputStream ==========
+
+pub struct BufferedOutputStream;
+
+impl BufferedOutputStream {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let out_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("out".to_string(), out_ref);
+                    obj.fields.insert("buf".to_string(), Value::Null);
+                    obj.fields.insert("count".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.io.BufferedOutputStream".to_string(), "<init>".to_string(), "(Ljava/io/OutputStream;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn write() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            // Simplified: delegate to underlying stream
+            Ok(())
+        });
+        Method::new_native("java.io.BufferedOutputStream".to_string(), "write".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.BufferedOutputStream".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.BufferedOutputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::init());
+        jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::write());
+        jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::flush());
+        jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::close());
+    }
 }

@@ -42,6 +42,7 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     stdlib::io::PrintStream::register(&mut jvm);
     stdlib::io::register_io_classes(&mut jvm);
     stdlib::util::register_util_classes(&mut jvm);
+    stdlib::math::register_math_classes(&mut jvm);
     stdlib::lang::register_thread_natives(&mut jvm);
     
     // Set up System.out

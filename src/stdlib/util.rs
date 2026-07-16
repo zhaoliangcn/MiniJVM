@@ -1661,6 +1661,82 @@ impl UUID {
     }
 }
 
+// ========== java.util.Random ==========
+
+pub struct Random;
+
+impl Random {
+    pub fn init() -> Method {
+        Method::new_native("java.util.Random".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn nextInt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let r = (ts.as_nanos() & 0x7FFFFFFF) as i32;
+            frame.push(Value::Int(r))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Random".to_string(), "nextInt".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextInt_bound() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let bound = frame.pop()?.as_int();
+            if bound <= 0 { return Err(JvmError::RuntimeError(RuntimeError::ArithmeticException)); }
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let r = ((ts.as_nanos() & 0x7FFFFFFF) as i32).abs() % bound;
+            frame.push(Value::Int(r))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Random".to_string(), "nextInt".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextLong() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let r = (ts.as_nanos() & 0x7FFFFFFFFFFFFFFF) as i64;
+            frame.push(Value::Long(r))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Random".to_string(), "nextLong".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextDouble() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let r = ((ts.as_nanos() & 0x7FFFFFFF) as f64) / 2147483648.0;
+            frame.push(Value::Double(r))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Random".to_string(), "nextDouble".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextBoolean() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let r = (ts.as_nanos() & 1) == 1;
+            frame.push(Value::Boolean(r))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Random".to_string(), "nextBoolean".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Random", Random::init());
+        jvm.method_area.add_native_method("java.util.Random", Random::nextInt());
+        jvm.method_area.add_native_method("java.util.Random", Random::nextInt_bound());
+        jvm.method_area.add_native_method("java.util.Random", Random::nextLong());
+        jvm.method_area.add_native_method("java.util.Random", Random::nextDouble());
+        jvm.method_area.add_native_method("java.util.Random", Random::nextBoolean());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -1670,6 +1746,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     HashSet::register(jvm);
     LinkedHashSet::register(jvm);
     PriorityQueue::register(jvm);
+    Random::register(jvm);
     UUID::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);

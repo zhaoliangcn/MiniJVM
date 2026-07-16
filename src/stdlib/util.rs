@@ -1197,6 +1197,10 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::newSetFromMap());
     }
 }
 
@@ -1644,6 +1648,119 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "checkedSet".to_string(), "(Ljava/util/Set;Ljava/lang/Class;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let list_ref = frame.pop()?;
+            // Return the same list wrapped in a SynchronizedList marker
+            if let Value::ObjectRef(list_id) = &list_ref {
+                if let Some(list_obj) = jvm.heap.get(*list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    let wrapper = HeapObject::new("java.util.Collections$SynchronizedList".to_string());
+                    let wrapper_ref = jvm.allocate(wrapper)?;
+                    if let Some(w_obj) = jvm.heap.get_mut(wrapper_ref) {
+                        w_obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                        w_obj.fields.insert("size".to_string(), Value::Int(size));
+                    }
+                    frame.push(Value::ObjectRef(wrapper_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(list_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedList".to_string(), "(Ljava/util/List;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let map_ref = frame.pop()?;
+            if let Value::ObjectRef(map_id) = &map_ref {
+                if let Some(map_obj) = jvm.heap.get(*map_id) {
+                    let keys_ref = map_obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = map_obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = map_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    let wrapper = HeapObject::new("java.util.Collections$SynchronizedMap".to_string());
+                    let wrapper_ref = jvm.allocate(wrapper)?;
+                    if let Some(w_obj) = jvm.heap.get_mut(wrapper_ref) {
+                        w_obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                        w_obj.fields.insert("values".to_string(), Value::ArrayRef(vals_ref));
+                        w_obj.fields.insert("size".to_string(), Value::Int(size));
+                    }
+                    frame.push(Value::ObjectRef(wrapper_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(map_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedMap".to_string(), "(Ljava/util/Map;)Ljava/util/Map;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?; // Return the same set (simplified)
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedSet".to_string(), "(Ljava/util/Set;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn newSetFromMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let map_ref = frame.pop()?;
+            if let Value::ObjectRef(map_id) = &map_ref {
+                if let Some(map_obj) = jvm.heap.get(*map_id) {
+                    let keys_ref = map_obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = map_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    let set = HeapObject::new("java.util.HashSet".to_string());
+                    let set_ref = jvm.allocate(set)?;
+                    // Copy key data first
+                    let mut key_data = Vec::new();
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..(size as usize).min(keys.len()) {
+                                key_data.push(keys[i].clone());
+                            }
+                        }
+                    }
+                    let set_keys = HeapObject::new_array("[Ljava/lang/Object;".to_string(), key_data.len());
+                    let set_keys_ref = jvm.allocate(set_keys)?;
+                    if let Some(set_arr) = jvm.heap.get_mut(set_keys_ref) {
+                        if let Some(set_elems) = &mut set_arr.array_elements {
+                            for i in 0..key_data.len().min(set_elems.len()) {
+                                set_elems[i] = key_data[i].clone();
+                            }
+                        }
+                    }
+                    if let Some(set_obj) = jvm.heap.get_mut(set_ref) {
+                        set_obj.fields.insert("keys".to_string(), Value::ArrayRef(set_keys_ref));
+                        set_obj.fields.insert("size".to_string(), Value::Int(size));
+                    }
+                    frame.push(Value::ObjectRef(set_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "newSetFromMap".to_string(), "(Ljava/util/Map;)Ljava/util/Set;".to_string(), true, Some(native_impl))
     }
 }
 

@@ -2,6 +2,25 @@ use std::sync::Arc;
 use crate::error::{JvmError, RuntimeError, Result};
 use crate::runtime::{JVM, Frame, Value, HeapObject, method_area::{Method, NativeImplementation}};
 
+/// Compare two Values for equality, with special handling for String objects.
+/// In Java, HashMap uses equals() for key comparison, so String keys should be
+/// compared by their content rather than by object reference identity.
+fn values_equal(jvm: &JVM, a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::ObjectRef(id_a), Value::ObjectRef(id_b)) => {
+            if id_a == id_b { return true; }
+            // Check if both are String objects — compare by value
+            let str_a = jvm.heap.get(*id_a).and_then(|o| o.string_value.clone());
+            let str_b = jvm.heap.get(*id_b).and_then(|o| o.string_value.clone());
+            match (str_a, str_b) {
+                (Some(sa), Some(sb)) => sa == sb,
+                _ => false,
+            }
+        }
+        _ => a == b,
+    }
+}
+
 // ========== java.util.ArrayList ==========
 
 pub struct ArrayList;
@@ -230,7 +249,7 @@ impl HashMap {
                 if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                     if let Some(elements) = &keys_arr.array_elements {
                         for (i, e) in elements.iter().enumerate() {
-                            if *e == key {
+                            if values_equal(&*jvm, e, &key) {
                                 found_index = Some(i);
                                 break;
                             }
@@ -317,7 +336,7 @@ impl HashMap {
                     if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                         if let Some(elements) = &keys_arr.array_elements {
                             for (i, e) in elements.iter().enumerate() {
-                                if *e == key {
+                                if values_equal(&*jvm, e, &key) {
                                     if let Some(vals_arr) = jvm.heap.get(vals_ref) {
                                         if let Some(vals) = &vals_arr.array_elements {
                                             if i < vals.len() {
@@ -350,7 +369,7 @@ impl HashMap {
                         .unwrap_or(0);
                     if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                         if let Some(elements) = &keys_arr.array_elements {
-                            found = elements.iter().any(|e| *e == key);
+                            found = elements.iter().any(|e| values_equal(&*jvm, e, &key));
                         }
                     }
                 }
@@ -1231,7 +1250,7 @@ impl TreeMap {
                     if let Some(keys) = &keys_arr.array_elements {
                         for (i, k) in keys.iter().enumerate() {
                             if i >= current_size { break; }
-                            if *k == key {
+                            if values_equal(&*jvm, k, &key) {
                                 found_index = Some(i);
                                 break;
                             }
@@ -1308,7 +1327,7 @@ impl TreeMap {
                     if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                         if let Some(keys) = &keys_arr.array_elements {
                             for i in 0..size {
-                                if i < keys.len() && keys[i] == key {
+                                if i < keys.len() && values_equal(&*jvm, &keys[i], &key) {
                                     if let Some(vals_arr) = jvm.heap.get(vals_ref) {
                                         if let Some(vals) = &vals_arr.array_elements {
                                             if i < vals.len() {
@@ -2109,7 +2128,7 @@ impl Properties {
                 let mut found = false;
                 if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                     if let Some(keys) = &keys_arr.array_elements {
-                        found = keys.iter().any(|k| *k == key);
+                        found = keys.iter().any(|k| values_equal(&*jvm, k, &key));
                     }
                 }
                 if !found {
@@ -2172,7 +2191,7 @@ impl Properties {
                     if let Some(keys_arr) = jvm.heap.get(keys_ref) {
                         if let Some(keys) = &keys_arr.array_elements {
                             for i in 0..size {
-                                if i < keys.len() && keys[i] == key {
+                                if i < keys.len() && values_equal(&*jvm, &keys[i], &key) {
                                     if let Some(vals_arr) = jvm.heap.get(vals_ref) {
                                         if let Some(vals) = &vals_arr.array_elements {
                                             if i < vals.len() {

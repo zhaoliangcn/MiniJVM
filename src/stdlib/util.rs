@@ -388,8 +388,543 @@ impl HashMap {
     }
 }
 
+// ========== java.util.HashSet ==========
+
+pub struct HashSet;
+
+impl HashSet {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // HashSet uses HashMap internally
+                let map = HeapObject::new("java.util.HashMap".to_string());
+                let map_ref = jvm.allocate(map)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("map".to_string(), Value::ObjectRef(map_ref));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.HashSet".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Get the map reference from the HashSet object
+                let map_ref = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    obj.fields.get("map")
+                        .and_then(|v| if let Value::ObjectRef(m) = v { Some(*m) } else { None })
+                        .unwrap_or(0)
+                };
+                if map_ref == 0 { frame.push(Value::Boolean(true))?; return Ok(()); }
+                
+                // Extract current state from the map
+                let (keys_ref, vals_ref, current_size, found) = {
+                    let map_obj = jvm.heap.get(map_ref)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let k_ref = map_obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = map_obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = map_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let mut f = false;
+                    if let Some(keys_arr) = jvm.heap.get(k_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            f = keys.iter().any(|k| *k == elem);
+                        }
+                    }
+                    (k_ref, v_ref, size, f)
+                };
+                
+                if !found {
+                    // Add to the map's keys array
+                    let new_size = current_size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if current_size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() {
+                                    new_keys[i] = k.clone();
+                                }
+                                *keys = new_keys;
+                            }
+                            if current_size < keys.len() {
+                                keys[current_size] = elem;
+                            }
+                        }
+                    }
+                    // Add to values array
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if current_size >= vals.len() {
+                                let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, v) in vals.iter().enumerate() {
+                                    new_vals[i] = v.clone();
+                                }
+                                *vals = new_vals;
+                            }
+                            if current_size < vals.len() {
+                                vals[current_size] = Value::Null;
+                            }
+                        }
+                    }
+                    // Update size
+                    if let Some(map_obj) = jvm.heap.get_mut(map_ref) {
+                        map_obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                    }
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashSet".to_string(), "add".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(map_ref)) = obj.fields.get("map") {
+                        if let Some(map_obj) = jvm.heap.get(*map_ref) {
+                            map_obj.fields.get("size")
+                                .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                                .unwrap_or(0)
+                        } else { 0 }
+                    } else { 0 }
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashSet".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isEmpty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(map_ref)) = obj.fields.get("map") {
+                        if let Some(map_obj) = jvm.heap.get(*map_ref) {
+                            map_obj.fields.get("size")
+                                .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                                .unwrap_or(0)
+                        } else { 0 }
+                    } else { 0 }
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Boolean(size == 0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashSet".to_string(), "isEmpty".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn contains() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut found = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(map_ref)) = obj.fields.get("map") {
+                        if let Some(map_obj) = jvm.heap.get(*map_ref) {
+                            let keys_ref = map_obj.fields.get("keys")
+                                .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                                .unwrap_or(0);
+                            if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                                if let Some(keys) = &keys_arr.array_elements {
+                                    found = keys.iter().any(|k| *k == elem);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Boolean(found))?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashSet".to_string(), "contains".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.HashSet", HashSet::init());
+        jvm.method_area.add_native_method("java.util.HashSet", HashSet::add());
+        jvm.method_area.add_native_method("java.util.HashSet", HashSet::size());
+        jvm.method_area.add_native_method("java.util.HashSet", HashSet::isEmpty());
+        jvm.method_area.add_native_method("java.util.HashSet", HashSet::contains());
+    }
+}
+
+// ========== java.util.Arrays ==========
+
+pub struct Arrays;
+
+impl Arrays {
+    pub fn asList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            // Return the array itself wrapped in a simple list view
+            let arr = frame.pop()?;
+            // Create a simple list wrapper
+            let list = HeapObject::new("java.util.Arrays$ArrayList".to_string());
+            let list_ref = jvm.allocate(list)?;
+            let arr_copy = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+            let arr_copy_ref = jvm.allocate(arr_copy)?;
+            if let Some(obj) = jvm.heap.get_mut(list_ref) {
+                obj.fields.insert("elementData".to_string(), arr);
+                obj.fields.insert("size".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(list_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Arrays".to_string(), "asList".to_string(), "([Ljava/lang/Object;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let arr = frame.pop()?;
+            let mut result = "[".to_string();
+            if let Value::ArrayRef(arr_id) = arr {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    if let Some(elements) = &arr_obj.array_elements {
+                        for (i, elem) in elements.iter().enumerate() {
+                            if i > 0 { result.push_str(", "); }
+                            match elem {
+                                Value::Int(v) => result.push_str(&v.to_string()),
+                                Value::Long(v) => result.push_str(&v.to_string()),
+                                Value::Float(v) => result.push_str(&v.to_string()),
+                                Value::Double(v) => result.push_str(&v.to_string()),
+                                Value::Boolean(v) => result.push_str(&v.to_string()),
+                                Value::Null => result.push_str("null"),
+                                Value::ObjectRef(id) => {
+                                    if let Some(s) = jvm.heap.get(*id).and_then(|o| o.string_value.clone()) {
+                                        result.push_str(&s);
+                                    } else {
+                                        result.push_str(&format!("@{}", id));
+                                    }
+                                }
+                                _ => result.push_str("?"),
+                            }
+                        }
+                    }
+                }
+            }
+            result.push(']');
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+            let str_ref = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(str_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Arrays".to_string(), "toString".to_string(), "([Ljava/lang/Object;)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn sort() -> Method {
+        // Simplified: no-op for now
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
+        Method::new_native("java.util.Arrays".to_string(), "sort".to_string(), "([Ljava/lang/Object;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn binarySearch() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(-1))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Arrays".to_string(), "binarySearch".to_string(), "([Ljava/lang/Object;Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::asList());
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::toString());
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::sort());
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::binarySearch());
+    }
+}
+
+// ========== java.util.Collections ==========
+
+pub struct Collections;
+
+impl Collections {
+    pub fn singletonList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let list = HeapObject::new("java.util.Collections$SingletonList".to_string());
+            let list_ref = jvm.allocate(list)?;
+            let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 1);
+            let arr_ref = jvm.allocate(arr)?;
+            if let Some(arr_obj) = jvm.heap.get_mut(arr_ref) {
+                if let Some(elements) = &mut arr_obj.array_elements {
+                    if !elements.is_empty() {
+                        elements[0] = elem;
+                    }
+                }
+            }
+            if let Some(obj) = jvm.heap.get_mut(list_ref) {
+                obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                obj.fields.insert("size".to_string(), Value::Int(1));
+            }
+            frame.push(Value::ObjectRef(list_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "singletonList".to_string(), "(Ljava/lang/Object;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn emptyList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let list = HeapObject::new("java.util.Collections$EmptyList".to_string());
+            let list_ref = jvm.allocate(list)?;
+            let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+            let arr_ref = jvm.allocate(arr)?;
+            if let Some(obj) = jvm.heap.get_mut(list_ref) {
+                obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                obj.fields.insert("size".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(list_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "emptyList".to_string(), "()Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Collections", Collections::singletonList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::emptyList());
+    }
+}
+
+// ========== java.util.Iterator ==========
+
+pub struct Iterator;
+
+impl Iterator {
+    pub fn hasNext() -> Method {
+        Method::new_native("java.util.Iterator".to_string(), "hasNext".to_string(), "()Z".to_string(), false, None)
+    }
+
+    pub fn next() -> Method {
+        Method::new_native("java.util.Iterator".to_string(), "next".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Iterator", Iterator::hasNext());
+        jvm.method_area.add_native_method("java.util.Iterator", Iterator::next());
+    }
+}
+
+// ========== java.lang.Iterable ==========
+
+pub struct Iterable;
+
+impl Iterable {
+    pub fn iterator() -> Method {
+        Method::new_native("java.lang.Iterable".to_string(), "iterator".to_string(), "()Ljava/util/Iterator;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Iterable", Iterable::iterator());
+    }
+}
+
+// ========== java.util.Objects ==========
+
+pub struct Objects;
+
+impl Objects {
+    pub fn equals() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let b = frame.pop()?;
+            let a = frame.pop()?;
+            let result = match (&a, &b) {
+                (Value::Null, Value::Null) => true,
+                (Value::Null, _) | (_, Value::Null) => false,
+                _ => a == b,
+            };
+            frame.push(Value::Boolean(result))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "equals".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn hashCode() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let obj = frame.pop()?;
+            let hash = match obj {
+                Value::Null => 0,
+                Value::ObjectRef(id) => id as i32,
+                Value::Int(v) => v,
+                _ => 0,
+            };
+            frame.push(Value::Int(hash))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "hashCode".to_string(), "(Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = frame.pop()?;
+            match obj {
+                Value::Null => {
+                    let s = HeapObject::new_string("java.lang.String".to_string(), "null".to_string());
+                    let r = jvm.allocate(s)?;
+                    frame.push(Value::ObjectRef(r))?;
+                }
+                Value::ObjectRef(id) => {
+                    if let Some(o) = jvm.heap.get(id) {
+                        if let Some(s) = &o.string_value {
+                            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                            let r = jvm.allocate(str_obj)?;
+                            frame.push(Value::ObjectRef(r))?;
+                        } else {
+                            let s = format!("{}@{}", o.class_name, id);
+                            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                            let r = jvm.allocate(str_obj)?;
+                            frame.push(Value::ObjectRef(r))?;
+                        }
+                    }
+                }
+                _ => {
+                    let s = format!("{}", obj);
+                    let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                    let r = jvm.allocate(str_obj)?;
+                    frame.push(Value::ObjectRef(r))?;
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "toString".to_string(), "(Ljava/lang/Object;)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn requireNonNull() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let obj = frame.pop()?;
+            if obj.is_null() {
+                return Err(JvmError::RuntimeError(RuntimeError::NullPointerException));
+            }
+            frame.push(obj)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "requireNonNull".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Objects", Objects::equals());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::hashCode());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::toString());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNull());
+    }
+}
+
+// ========== java.util.Optional ==========
+
+pub struct Optional;
+
+impl Optional {
+    pub fn empty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let opt = HeapObject::new("java.util.Optional".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Optional".to_string(), "empty".to_string(), "()Ljava/util/Optional;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn of() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let opt = HeapObject::new("java.util.Optional".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), value);
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Optional".to_string(), "of".to_string(), "(Ljava/lang/Object;)Ljava/util/Optional;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isPresent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let present = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    !obj.fields.get("value").map(|v| v.is_null()).unwrap_or(true)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(present))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Optional".to_string(), "isPresent".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("value") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Optional".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn orElse() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let other = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("value") {
+                        if !val.is_null() {
+                            frame.push(val.clone())?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(other)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Optional".to_string(), "orElse".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Optional", Optional::empty());
+        jvm.method_area.add_native_method("java.util.Optional", Optional::of());
+        jvm.method_area.add_native_method("java.util.Optional", Optional::isPresent());
+        jvm.method_area.add_native_method("java.util.Optional", Optional::get());
+        jvm.method_area.add_native_method("java.util.Optional", Optional::orElse());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
     HashMap::register(jvm);
+    HashSet::register(jvm);
+    Arrays::register(jvm);
+    Collections::register(jvm);
+    Iterator::register(jvm);
+    Iterable::register(jvm);
+    Objects::register(jvm);
+    Optional::register(jvm);
 }

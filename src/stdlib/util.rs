@@ -278,11 +278,77 @@ impl ArrayList {
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::init_capacity());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::size());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::add());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::addAll());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::get());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::isEmpty());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::remove());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::indexOf());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::contains());
+    }
+}
+
+impl ArrayList {
+    pub fn addAll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let coll_ref = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut elems = Vec::new();
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract elements from the collection
+                if let Value::ObjectRef(coll_id) = coll_ref {
+                    if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                        let arr_ref = coll_obj.fields.get("elementData")
+                            .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                            .unwrap_or(0);
+                        let size = coll_obj.fields.get("size")
+                            .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                            .unwrap_or(0);
+                        if let Some(arr) = jvm.heap.get(arr_ref) {
+                            if let Some(elements) = &arr.array_elements {
+                                for i in 0..size.min(elements.len()) {
+                                    elems.push(elements[i].clone());
+                                }
+                            }
+                        }
+                    }
+                }
+                // Add all elements to this ArrayList
+                let (current_size, arr_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, a_ref)
+                };
+                let new_size = current_size + elems.len();
+                if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                    if let Some(elements) = &mut arr.array_elements {
+                        if new_size > elements.len() {
+                            let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                            for (i, e) in elements.iter().enumerate() {
+                                new_elems[i] = e.clone();
+                            }
+                            *elements = new_elems;
+                        }
+                        for i in 0..elems.len() {
+                            if current_size + i < elements.len() {
+                                elements[current_size + i] = elems[i].clone();
+                            }
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                }
+            }
+            frame.push(Value::Boolean(!elems.is_empty()))?;
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "addAll".to_string(), "(Ljava/util/Collection;)Z".to_string(), false, Some(native_impl))
     }
 }
 

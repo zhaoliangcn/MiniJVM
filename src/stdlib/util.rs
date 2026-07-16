@@ -1737,10 +1737,474 @@ impl Random {
     }
 }
 
+// ========== java.util.Stack ==========
+
+pub struct Stack;
+
+impl Stack {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn push() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let elem_clone = elem.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (current_size, arr_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, a_ref)
+                };
+                let new_size = current_size + 1;
+                if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                    if let Some(elements) = &mut arr.array_elements {
+                        if current_size >= elements.len() {
+                            let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                            for (i, e) in elements.iter().enumerate() {
+                                new_elems[i] = e.clone();
+                            }
+                            *elements = new_elems;
+                        }
+                        if current_size < elements.len() {
+                            elements[current_size] = elem_clone;
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                }
+            }
+            frame.push(elem)?; // push returns the element
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "push".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn pop() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            elements[current_size - 1].clone()
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            elements[current_size - 1] = Value::Null;
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "pop".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn peek() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let arr_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if size > 0 {
+                        if let Some(arr) = jvm.heap.get(arr_ref) {
+                            if let Some(elements) = &arr.array_elements {
+                                if size - 1 < elements.len() {
+                                    frame.push(elements[size - 1].clone())?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "peek".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn empty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Boolean(size == 0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "empty".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn search() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut pos = -1;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let arr_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in (0..size).rev() {
+                                if i < elements.len() && elements[i] == elem {
+                                    pos = (size - i) as i32;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(pos))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Stack".to_string(), "search".to_string(), "(Ljava/lang/Object;)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Stack", Stack::init());
+        jvm.method_area.add_native_method("java.util.Stack", Stack::push());
+        jvm.method_area.add_native_method("java.util.Stack", Stack::pop());
+        jvm.method_area.add_native_method("java.util.Stack", Stack::peek());
+        jvm.method_area.add_native_method("java.util.Stack", Stack::empty());
+        jvm.method_area.add_native_method("java.util.Stack", Stack::search());
+    }
+}
+
+// ========== java.util.Base64 ==========
+
+pub struct Base64;
+
+impl Base64 {
+    pub fn getEncoder() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = HeapObject::new("java.util.Base64$Encoder".to_string());
+            let ref_id = jvm.allocate(obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Base64".to_string(), "getEncoder".to_string(), "()Ljava/util/Base64$Encoder;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn getDecoder() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = HeapObject::new("java.util.Base64$Decoder".to_string());
+            let ref_id = jvm.allocate(obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Base64".to_string(), "getDecoder".to_string(), "()Ljava/util/Base64$Decoder;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Base64", Base64::getEncoder());
+        jvm.method_area.add_native_method("java.util.Base64", Base64::getDecoder());
+        // Register the inner Encoder/Decoder classes
+        let encoder_encode = Method::new_native(
+            "java.util.Base64$Encoder".to_string(),
+            "encodeToString".to_string(),
+            "([B)Ljava/lang/String;".to_string(),
+            false,
+            Some(Arc::new(|frame, jvm| {
+                let arr_ref = frame.get_local(1)?.clone();
+                let mut bytes = Vec::new();
+                if let Value::ArrayRef(arr_id) = arr_ref {
+                    if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                        if let Some(elements) = &arr_obj.array_elements {
+                            for elem in elements {
+                                match elem {
+                                    Value::Byte(b) => bytes.push(*b as u8),
+                                    Value::Int(i) => bytes.push(*i as u8),
+                                    _ => bytes.push(0),
+                                }
+                            }
+                        }
+                    }
+                }
+                let encoded = base64_encode(&bytes);
+                let s = HeapObject::new_string("java.lang.String".to_string(), encoded);
+                let r = jvm.allocate(s)?;
+                frame.push(Value::ObjectRef(r))?;
+                Ok(())
+            }))
+        );
+        jvm.method_area.add_native_method("java.util.Base64$Encoder", encoder_encode);
+
+        let decoder_decode = Method::new_native(
+            "java.util.Base64$Decoder".to_string(),
+            "decode".to_string(),
+            "(Ljava/lang/String;)[B".to_string(),
+            false,
+            Some(Arc::new(|frame, jvm| {
+                let str_ref = frame.get_local(1)?.clone();
+                let s = if let Value::ObjectRef(str_id) = str_ref {
+                    if let Some(str_obj) = jvm.heap.get(str_id) {
+                        str_obj.string_value.clone().unwrap_or_default()
+                    } else { String::new() }
+                } else { String::new() };
+                let decoded = base64_decode(&s);
+                let arr = HeapObject::new_array("[B".to_string(), decoded.len());
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(arr_obj) = jvm.heap.get_mut(arr_ref) {
+                    if let Some(elements) = &mut arr_obj.array_elements {
+                        for (i, &b) in decoded.iter().enumerate() {
+                            if i < elements.len() {
+                                elements[i] = Value::Byte(b as i8);
+                            }
+                        }
+                    }
+                }
+                frame.push(Value::ArrayRef(arr_ref))?;
+                Ok(())
+            }))
+        );
+        jvm.method_area.add_native_method("java.util.Base64$Decoder", decoder_decode);
+    }
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut result = String::new();
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        result.push(CHARS[((triple >> 18) & 0x3F) as usize] as char);
+        result.push(CHARS[((triple >> 12) & 0x3F) as usize] as char);
+        if chunk.len() > 1 {
+            result.push(CHARS[((triple >> 6) & 0x3F) as usize] as char);
+        } else { result.push('='); }
+        if chunk.len() > 2 {
+            result.push(CHARS[(triple & 0x3F) as usize] as char);
+        } else { result.push('='); }
+    }
+    result
+}
+
+fn base64_decode(data: &str) -> Vec<u8> {
+    fn char_val(c: u8) -> Option<u32> {
+        match c {
+            b'A'..=b'Z' => Some((c - b'A') as u32),
+            b'a'..=b'z' => Some((c - b'a' + 26) as u32),
+            b'0'..=b'9' => Some((c - b'0' + 52) as u32),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    let mut result = Vec::new();
+    let bytes: Vec<u8> = data.bytes().filter(|&c| c != b'=' && char_val(c).is_some()).collect();
+    for chunk in bytes.chunks(4) {
+        if chunk.len() < 4 { break; }
+        let vals: Vec<u32> = chunk.iter().filter_map(|&c| char_val(c)).collect();
+        if vals.len() < 4 { continue; }
+        let triple = (vals[0] << 18) | (vals[1] << 12) | (vals[2] << 6) | vals[3];
+        result.push((triple >> 16) as u8);
+        result.push((triple >> 8) as u8);
+        result.push(triple as u8);
+    }
+    result
+}
+
+// ========== java.util.Properties ==========
+
+pub struct Properties;
+
+impl Properties {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let keys_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let vals_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let keys_ref = jvm.allocate(keys_arr)?;
+                let vals_ref = jvm.allocate(vals_arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                    obj.fields.insert("values".to_string(), Value::ArrayRef(vals_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Properties".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn setProperty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut current_size, keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, k_ref, v_ref)
+                };
+                // Check if key exists
+                let mut found = false;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        found = keys.iter().any(|k| *k == key);
+                    }
+                }
+                if !found {
+                    let new_size = current_size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if current_size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() {
+                                    new_keys[i] = k.clone();
+                                }
+                                *keys = new_keys;
+                            }
+                            if current_size < keys.len() {
+                                keys[current_size] = key;
+                            }
+                        }
+                    }
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if current_size >= vals.len() {
+                                let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, v) in vals.iter().enumerate() {
+                                    new_vals[i] = v.clone();
+                                }
+                                *vals = new_vals;
+                            }
+                            if current_size < vals.len() {
+                                vals[current_size] = val;
+                            }
+                        }
+                    }
+                    current_size = new_size;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(current_size as i32));
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Properties".to_string(), "setProperty".to_string(), "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getProperty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size {
+                                if i < keys.len() && keys[i] == key {
+                                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                                        if let Some(vals) = &vals_arr.array_elements {
+                                            if i < vals.len() {
+                                                frame.push(vals[i].clone())?;
+                                                return Ok(());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Properties".to_string(), "getProperty".to_string(), "(Ljava/lang/String;)Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Properties", Properties::init());
+        jvm.method_area.add_native_method("java.util.Properties", Properties::setProperty());
+        jvm.method_area.add_native_method("java.util.Properties", Properties::getProperty());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
     LinkedList::register(jvm);
+    Stack::register(jvm);
     HashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);
@@ -1748,6 +2212,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     PriorityQueue::register(jvm);
     Random::register(jvm);
     UUID::register(jvm);
+    Base64::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);
     Iterator::register(jvm);

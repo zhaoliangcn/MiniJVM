@@ -1415,6 +1415,9 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::reverseOrder());
         jvm.method_area.add_native_method("java.util.Collections", Collections::list());
         jvm.method_area.add_native_method("java.util.Collections", Collections::enumeration());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::emptyIterator());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::emptyListIterator());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::emptyEnumeration());
         jvm.method_area.add_native_method("java.util.Collections", Collections::addAll());
         jvm.method_area.add_native_method("java.util.Collections", Collections::indexOfSubList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::lastIndexOfSubList());
@@ -2030,6 +2033,18 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "enumeration".to_string(), "(Ljava/util/Collection;)Ljava/util/Enumeration;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn emptyIterator() -> Method {
+        Method::new_native("java.util.Collections".to_string(), "emptyIterator".to_string(), "()Ljava/util/Iterator;".to_string(), true, None)
+    }
+
+    pub fn emptyListIterator() -> Method {
+        Method::new_native("java.util.Collections".to_string(), "emptyListIterator".to_string(), "()Ljava/util/ListIterator;".to_string(), true, None)
+    }
+
+    pub fn emptyEnumeration() -> Method {
+        Method::new_native("java.util.Collections".to_string(), "emptyEnumeration".to_string(), "()Ljava/util/Enumeration;".to_string(), true, None)
     }
 
     pub fn addAll() -> Method {

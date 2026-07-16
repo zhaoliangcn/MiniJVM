@@ -2219,6 +2219,176 @@ impl Properties {
     }
 }
 
+// ========== java.util.Comparator ==========
+
+pub struct Comparator;
+
+impl Comparator {
+    pub fn compare() -> Method {
+        // Abstract method - registered for interface completeness
+        Method::new_native("java.util.Comparator".to_string(), "compare".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)I".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::compare());
+    }
+}
+
+// ========== java.util.concurrent.atomic.AtomicInteger ==========
+
+pub struct AtomicInteger;
+
+impl AtomicInteger {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_value() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_int();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Int(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "get".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_int();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Int(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "set".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn incrementAndGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    let new_val = old + 1;
+                    obj.fields.insert("value".to_string(), Value::Int(new_val));
+                    new_val
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "incrementAndGet".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn decrementAndGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    let new_val = old - 1;
+                    obj.fields.insert("value".to_string(), Value::Int(new_val));
+                    new_val
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "decrementAndGet".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn addAndGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let delta = frame.get_local(1)?.as_int();
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    let new_val = old + delta;
+                    obj.fields.insert("value".to_string(), Value::Int(new_val));
+                    new_val
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "addAndGet".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn compareAndSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let update = frame.get_local(2)?.as_int();
+            let expect = frame.get_local(1)?.as_int();
+            let this_ref = frame.get_local(0)?;
+            let mut success = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    if old == expect {
+                        obj.fields.insert("value".to_string(), Value::Int(update));
+                        success = true;
+                    }
+                }
+            }
+            frame.push(Value::Boolean(success))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicInteger".to_string(), "compareAndSet".to_string(), "(II)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::init_value());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::set());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::incrementAndGet());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::decrementAndGet());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::addAndGet());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicInteger", AtomicInteger::compareAndSet());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -2234,8 +2404,10 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Base64::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);
+    Comparator::register(jvm);
     Iterator::register(jvm);
     Iterable::register(jvm);
     Objects::register(jvm);
     Optional::register(jvm);
+    AtomicInteger::register(jvm);
 }

@@ -2047,11 +2047,189 @@ impl Boolean {
     }
 }
 
+// ========== java.lang.ThreadLocal ==========
+
+pub struct ThreadLocal;
+
+impl ThreadLocal {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Allocate first, then update the object
+                let map_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let map_ref = jvm.allocate(map_arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("threadValues".to_string(), Value::ArrayRef(map_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadLocal".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let current_tid = jvm.current_thread_id;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let map_ref = obj.fields.get("threadValues")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(map_arr) = jvm.heap.get(map_ref) {
+                        if let Some(elements) = &map_arr.array_elements {
+                            // Elements are stored as [threadId1, value1, threadId2, value2, ...]
+                            for i in (0..size * 2).step_by(2) {
+                                if i + 1 < elements.len() {
+                                    if let Value::Int(tid) = &elements[i] {
+                                        if *tid as usize == current_tid {
+                                            frame.push(elements[i + 1].clone())?;
+                                            return Ok(());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Return null if not found
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadLocal".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let value_clone = value.clone();
+            let this_ref = frame.get_local(0)?;
+            let current_tid = jvm.current_thread_id;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract fields first, then drop the borrow
+                let (mut size, map_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let m_ref = obj.fields.get("threadValues")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, m_ref)
+                };
+                // Check if this thread already has a value
+                let mut found = false;
+                if let Some(map_arr) = jvm.heap.get_mut(map_ref) {
+                    if let Some(elements) = &mut map_arr.array_elements {
+                        for i in (0..size * 2).step_by(2) {
+                            if i + 1 < elements.len() {
+                                if let Value::Int(tid) = &elements[i] {
+                                    if *tid as usize == current_tid {
+                                        elements[i + 1] = value_clone;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if !found {
+                            let new_size = size + 1;
+                            let needed = new_size * 2;
+                            if needed > elements.len() {
+                                let mut new_elems = vec![Value::Null; (needed * 3 / 2 + 1).max(10)];
+                                for (i, e) in elements.iter().enumerate() {
+                                    new_elems[i] = e.clone();
+                                }
+                                *elements = new_elems;
+                            }
+                            if needed <= elements.len() {
+                                elements[needed - 2] = Value::Int(current_tid as i32);
+                                elements[needed - 1] = value;
+                            }
+                            size = new_size;
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadLocal".to_string(), "set".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn remove() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let current_tid = jvm.current_thread_id;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract fields first, then drop the borrow
+                let (mut size, map_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let m_ref = obj.fields.get("threadValues")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, m_ref)
+                };
+                if let Some(map_arr) = jvm.heap.get_mut(map_ref) {
+                    if let Some(elements) = &mut map_arr.array_elements {
+                        for i in (0..size * 2).step_by(2) {
+                            if i + 1 < elements.len() {
+                                if let Value::Int(tid) = &elements[i] {
+                                    if *tid as usize == current_tid {
+                                        for j in i..size * 2 - 2 {
+                                            elements[j] = elements[j + 2].clone();
+                                        }
+                                        let last = size * 2 - 2;
+                                        if last < elements.len() {
+                                            elements[last] = Value::Null;
+                                            if last + 1 < elements.len() {
+                                                elements[last + 1] = Value::Null;
+                                            }
+                                        }
+                                        size -= 1;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadLocal".to_string(), "remove".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ThreadLocal", ThreadLocal::init());
+        jvm.method_area.add_native_method("java.lang.ThreadLocal", ThreadLocal::get());
+        jvm.method_area.add_native_method("java.lang.ThreadLocal", ThreadLocal::set());
+        jvm.method_area.add_native_method("java.lang.ThreadLocal", ThreadLocal::remove());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
     Class::register(jvm);
     Runnable::register(jvm);
+    ThreadLocal::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

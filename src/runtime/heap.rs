@@ -11,6 +11,10 @@ pub struct HeapObject {
     pub array_length: usize,
     pub monitor_owner: Option<usize>,
     pub monitor_count: usize,
+    /// GC generation: 0 = young, 1 = old
+    pub generation: u8,
+    /// Age counter for young generation objects (survived collections)
+    pub age: u8,
 }
 
 impl HeapObject {
@@ -23,6 +27,8 @@ impl HeapObject {
             array_length: 0,
             monitor_owner: None,
             monitor_count: 0,
+            generation: 0,
+            age: 0,
         }
     }
 
@@ -35,6 +41,8 @@ impl HeapObject {
             array_length: 0,
             monitor_owner: None,
             monitor_count: 0,
+            generation: 0,
+            age: 0,
         }
     }
 
@@ -47,6 +55,8 @@ impl HeapObject {
             array_length: length,
             monitor_owner: None,
             monitor_count: 0,
+            generation: 0,
+            age: 0,
         }
     }
 

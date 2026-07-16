@@ -586,30 +586,72 @@ fn thread_start_native(frame: &mut Frame, jvm: &mut JVM) -> Result<()> {
             .ok_or(JvmError::RuntimeError(RuntimeError::MethodNotFound(class_name.clone(), "run".to_string())))?;
         
         let run_method = run_method.clone();
-        
-        // Create a new frame for run()
-        let mut new_frame = Frame::new(run_method);
-        new_frame.set_local(0, Value::ObjectRef(this_id))?;
+        let this_id_copy = this_id;
         
         // Create a new thread in the scheduler
         let thread_name = format!("Thread-{}", jvm.scheduler.thread_count() + 1);
         let new_thread_id = jvm.scheduler.create_thread(thread_name)?;
         
-        // Push the frame onto the new thread's stack
-        let mut thread_stack = jvm.scheduler.take_stack(new_thread_id);
-        thread_stack.push(new_frame)?;
-        jvm.scheduler.save_stack(new_thread_id, thread_stack);
-        
         // Store nativeThreadId on the Java Thread object
-        if let Some(obj) = jvm.heap.get_mut(this_id) {
+        if let Some(obj) = jvm.heap.get_mut(this_id_copy) {
             obj.fields.insert("nativeThreadId".to_string(), Value::Int(new_thread_id as i32));
         }
         
         // Register the Java Thread object for currentThread() lookups
-        jvm.thread_objects.insert(new_thread_id, this_id);
+        jvm.thread_objects.insert(new_thread_id, this_id_copy);
         
-        // Start the thread (add to ready queue)
-        jvm.scheduler.start_thread(new_thread_id)?;
+        // Spawn a real OS thread to run the Java thread
+        let class_name_clone = class_name.clone();
+        let thread_name_clone = format!("os-thread-{}", new_thread_id);
+        
+        std::thread::Builder::new()
+            .name(thread_name_clone)
+            .spawn(move || {
+                // Create a new JVM instance for this thread
+                let mut thread_jvm = JVM::new();
+                
+                // Register standard library classes
+                crate::stdlib::lang::register_standard_classes(&mut thread_jvm);
+                crate::stdlib::io::PrintStream::register(&mut thread_jvm);
+                crate::stdlib::lang::register_thread_natives(&mut thread_jvm);
+                
+                // Load the class containing run() method
+                if let Err(e) = thread_jvm.load_class(&class_name_clone) {
+                    eprintln!("Thread {} failed to load class: {}", class_name_clone, e);
+                    return;
+                }
+                
+                // Look up the run() method again in the new JVM
+                let run_method = match thread_jvm.method_area.get_method(&class_name_clone, "run", "()V") {
+                    Some(m) => m.clone(),
+                    None => {
+                        eprintln!("Thread {} run() method not found", class_name_clone);
+                        return;
+                    }
+                };
+                
+                // Create a frame for run() with this as local 0
+                let mut new_frame = Frame::new(run_method);
+                if let Err(e) = new_frame.set_local(0, Value::ObjectRef(this_id_copy)) {
+                    eprintln!("Failed to set up run() frame: {}", e);
+                    return;
+                }
+                
+                // Push the frame and run the interpreter
+                if let Err(e) = thread_jvm.stack.push(new_frame) {
+                    eprintln!("Failed to push run() frame: {}", e);
+                    return;
+                }
+                
+                let interpreter = crate::interpreter::Interpreter::new();
+                let tid = thread_jvm.current_thread_id;
+                if let Err(e) = interpreter.run(&mut thread_jvm, tid) {
+                    eprintln!("Thread {} execution error: {}", class_name_clone, e);
+                }
+            })
+            .ok(); // Ignore spawn errors for now
+        
+        // The current thread continues immediately (non-blocking start)
     }
     
     Ok(())

@@ -1672,6 +1672,9 @@ fn handle_getstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
     
+    // Lazy-load the target class if not already loaded
+    jvm.load_class(&class_name)?;
+    
     let target_class = jvm.method_area.get_class(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
     
@@ -1701,6 +1704,9 @@ fn handle_putstatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, field_name, descriptor) = class.class_file.constant_pool.resolve_field_ref(index)?;
+    
+    // Lazy-load the target class
+    jvm.load_class(&class_name)?;
     
     let target_class = jvm.method_area.get_class_mut(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
@@ -1763,6 +1769,9 @@ fn handle_invokevirtual(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
     
+    // Lazy-load the target class
+    jvm.load_class(&class_name)?;
+    
     let target_class = jvm.method_area.get_class(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
     
@@ -1819,6 +1828,9 @@ fn handle_invokespecial(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
     
+    // Lazy-load the target class
+    jvm.load_class(&class_name)?;
+    
     let target_class = jvm.method_area.get_class(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
     
@@ -1871,6 +1883,9 @@ fn handle_invokestatic(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let class = jvm.method_area.get_class(&frame.method.class_name).unwrap();
     let (class_name, method_name, descriptor) = class.class_file.constant_pool.resolve_method_ref(index)?;
     
+    // Lazy-load the target class
+    jvm.load_class(&class_name)?;
+    
     let target_class = jvm.method_area.get_class(&class_name)
         .ok_or(RuntimeError::NoSuchClass(class_name.clone()))?;
     
@@ -1921,9 +1936,13 @@ fn handle_invokeinterface(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let obj_id = this_ref.as_ref();
     let obj = jvm.heap.get(obj_id)
         .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
-    let actual_class_name = &obj.class_name;
+    let actual_class_name = obj.class_name.clone();
+    drop(obj);
     
-    let target_class = jvm.method_area.get_class(actual_class_name)
+    // Lazy-load the actual class if not already loaded
+    jvm.load_class(&actual_class_name)?;
+    
+    let target_class = jvm.method_area.get_class(&actual_class_name)
         .ok_or(RuntimeError::NoSuchClass(actual_class_name.clone()))?;
     
     let method = target_class.get_method(&method_name, &descriptor)
@@ -2064,6 +2083,8 @@ fn handle_new(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
         .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
     let class_name_dotted = class_name.replace('/', ".");
+    // Lazy-load the target class
+    jvm.load_class(&class_name_dotted)?;
     let target_class = jvm.method_area.get_class(&class_name_dotted)
         .ok_or(RuntimeError::NoSuchClass(class_name_dotted.clone()))?;
     
@@ -2199,10 +2220,14 @@ fn handle_checkcast(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let target_class_name = class.class_file.constant_pool.get_class_name(index)
         .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
+    let target_class_name_dotted = target_class_name.replace('/', ".");
+    // Lazy-load the target class for checkcast
+    jvm.load_class(&target_class_name_dotted)?;
+    
     let obj = jvm.heap.get(obj_ref.as_ref())
         .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
     
-    if is_assignable_from(&obj.class_name, &target_class_name.replace('/', ".")) {
+    if is_assignable_from(&obj.class_name, &target_class_name_dotted) {
         frame.push(obj_ref)?;
     } else {
         return Err(RuntimeError(RuntimeError::ClassCastException));
@@ -2226,10 +2251,14 @@ fn handle_instanceof(frame: &mut Frame, jvm: &mut JVM) -> Result<usize> {
     let target_class_name = class.class_file.constant_pool.get_class_name(index)
         .ok_or(JvmError::ClassFileError(ClassFileError::ConstantPoolIndexOutOfBounds(index)))?;
     
+    let target_class_name_dotted = target_class_name.replace('/', ".");
+    // Lazy-load the target class for instanceof
+    jvm.load_class(&target_class_name_dotted)?;
+    
     let obj = jvm.heap.get(obj_ref.as_ref())
         .ok_or(RuntimeError(RuntimeError::NullPointerException))?;
     
-    let result = if is_assignable_from(&obj.class_name, &target_class_name.replace('/', ".")) {
+    let result = if is_assignable_from(&obj.class_name, &target_class_name_dotted) {
         1
     } else {
         0

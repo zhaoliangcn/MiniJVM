@@ -193,11 +193,100 @@ impl GcCollector {
     }
 
     fn generational(&mut self, heap: &mut Heap) -> Result<()> {
+        // Fallback to full mark-sweep when no stack is available
         self.mark_sweep(heap)
     }
 
     fn generational_with_stack(&mut self, heap: &mut Heap, stack: &JvmStack) -> Result<()> {
-        self.mark_sweep_with_stack(heap, stack)
+        let roots = self.find_roots_from_stack(stack);
+        
+        // Phase 1: Young collection — collect only young objects (generation 0)
+        let mut young_reachable = HashSet::new();
+        let mut young_roots = roots.iter()
+            .filter(|&&id| heap.get(id).map(|o| o.generation == 0).unwrap_or(false))
+            .copied()
+            .collect::<Vec<_>>();
+        // Also include roots that point to old objects, since they might reference young ones
+        let mut all_roots = roots.clone();
+        
+        // Mark young reachable objects starting from all roots
+        let mut queue = VecDeque::from(all_roots.clone());
+        let mut visited = HashSet::new();
+        
+        while let Some(id) = queue.pop_front() {
+            if visited.contains(&id) {
+                continue;
+            }
+            visited.insert(id);
+            
+            if let Some(obj) = heap.get(id) {
+                if obj.generation == 0 {
+                    young_reachable.insert(id);
+                }
+                // Follow references from all objects
+                for val in obj.fields.values() {
+                    if let Value::ObjectRef(ref_id) = val {
+                        if *ref_id != 0 && !visited.contains(ref_id) {
+                            queue.push_back(*ref_id);
+                        }
+                    } else if let Value::ArrayRef(ref_id) = val {
+                        if *ref_id != 0 && !visited.contains(ref_id) {
+                            queue.push_back(*ref_id);
+                        }
+                    }
+                }
+                if let Some(elements) = &obj.array_elements {
+                    for element in elements {
+                        if let Value::ObjectRef(ref_id) = element {
+                            if *ref_id != 0 && !visited.contains(ref_id) {
+                                queue.push_back(*ref_id);
+                            }
+                        } else if let Value::ArrayRef(ref_id) = element {
+                            if *ref_id != 0 && !visited.contains(ref_id) {
+                                queue.push_back(*ref_id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sweep young generation: remove unreachable young objects,
+        // promote surviving young objects (increment age, move to old gen if age >= threshold)
+        let promotion_age_threshold = 2; // Promote after surviving 2 young GCs
+        let mut promoted_count = 0;
+        let mut swept_young = 0;
+        
+        for i in 1..heap.len() {
+            if let Some(obj) = heap.get(i) {
+                if obj.generation == 0 {
+                    if young_reachable.contains(&i) {
+                        // Surviving young object: increment age, promote if old enough
+                        if let Some(obj) = heap.get_mut(i) {
+                            obj.age += 1;
+                            if obj.age >= promotion_age_threshold {
+                                obj.generation = 1; // Promote to old generation
+                                promoted_count += 1;
+                            }
+                        }
+                    } else {
+                        // Unreachable young object: sweep
+                        heap.deallocate(i)?;
+                        swept_young += 1;
+                    }
+                }
+            }
+        }
+        
+        // Phase 2: If promotion is still failing (high allocation), run full GC
+        // Simple heuristic: if young GC didn't free enough, run full mark-sweep
+        let young_total = heap.len();
+        if young_total > 0 && swept_young == 0 && promoted_count == 0 {
+            // Nothing was freed or promoted — run full GC
+            self.mark_sweep_with_stack(heap, stack)?;
+        }
+        
+        Ok(())
     }
 
     fn find_roots_from_stack(&self, stack: &JvmStack) -> Vec<usize> {

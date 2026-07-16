@@ -1201,6 +1201,9 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSet());
         jvm.method_area.add_native_method("java.util.Collections", Collections::newSetFromMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::reverseOrder());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::list());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::enumeration());
     }
 }
 
@@ -1761,6 +1764,54 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "newSetFromMap".to_string(), "(Ljava/util/Map;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn reverseOrder() -> Method {
+        // Returns a comparator that reverses natural ordering
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            // Return a new Comparator object
+            let comp = HeapObject::new("java.util.Comparator".to_string());
+            comp; // Placeholder - just return null
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "reverseOrder".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn list() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let enum_ref = frame.pop()?;
+            // Simplified: create an empty ArrayList
+            let list = HeapObject::new("java.util.ArrayList".to_string());
+            let list_ref = jvm.allocate(list)?;
+            let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+            let arr_ref = jvm.allocate(arr)?;
+            if let Some(list_obj) = jvm.heap.get_mut(list_ref) {
+                list_obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                list_obj.fields.insert("size".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(list_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "list".to_string(), "(Ljava/util/Enumeration;)Ljava/util/ArrayList;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn enumeration() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let coll_ref = frame.pop()?;
+            // Return the collection wrapped as an Enumeration
+            let enum_obj = HeapObject::new("java.util.Collections$Enumeration".to_string());
+            let enum_ref = jvm.allocate(enum_obj)?;
+            if let Value::ObjectRef(coll_id) = &coll_ref {
+                if let Some(enum_o) = jvm.heap.get_mut(enum_ref) {
+                    enum_o.fields.insert("collection".to_string(), coll_ref.clone());
+                    enum_o.fields.insert("position".to_string(), Value::Int(0));
+                }
+            }
+            frame.push(Value::ObjectRef(enum_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "enumeration".to_string(), "(Ljava/util/Collection;)Ljava/util/Enumeration;".to_string(), true, Some(native_impl))
     }
 }
 

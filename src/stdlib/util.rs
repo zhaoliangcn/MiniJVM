@@ -1420,6 +1420,7 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::lastIndexOfSubList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::rotate());
         jvm.method_area.add_native_method("java.util.Collections", Collections::swap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::asLifoQueue());
     }
 }
 
@@ -2153,6 +2154,32 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "swap".to_string(), "(Ljava/util/List;II)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn asLifoQueue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let deque_ref = frame.pop()?;
+            // Return the deque as a LIFO Queue (simplified: return the same deque)
+            if let Value::ObjectRef(deque_id) = &deque_ref {
+                // Extract field data first
+                let (arr_ref, size) = if let Some(deque_obj) = jvm.heap.get(*deque_id) {
+                    let a = deque_obj.fields.get("elementData").cloned();
+                    let s = deque_obj.fields.get("size").cloned();
+                    (a, s)
+                } else { (None, None) };
+                let wrapper = HeapObject::new("java.util.Collections$AsLIFOQueue".to_string());
+                let wrapper_ref = jvm.allocate(wrapper)?;
+                if let Some(w_obj) = jvm.heap.get_mut(wrapper_ref) {
+                    if let Some(a) = arr_ref { w_obj.fields.insert("elementData".to_string(), a); }
+                    if let Some(s) = size { w_obj.fields.insert("size".to_string(), s); }
+                }
+                frame.push(Value::ObjectRef(wrapper_ref))?;
+                return Ok(());
+            }
+            frame.push(deque_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "asLifoQueue".to_string(), "(Ljava/util/Deque;)Ljava/util/Queue;".to_string(), true, Some(native_impl))
     }
 }
 

@@ -514,6 +514,7 @@ impl String {
         jvm.method_area.add_native_method("java.lang.String", String::contains());
         jvm.method_area.add_native_method("java.lang.String", String::isEmpty());
         jvm.method_area.add_native_method("java.lang.String", String::join());
+        jvm.method_area.add_native_method("java.lang.String", String::repeat());
         jvm.method_area.add_native_method("java.lang.String", String::split());
     }
 }
@@ -560,6 +561,24 @@ impl String {
             Ok(())
         });
         Method::new_native("java.lang.String".to_string(), "join".to_string(), "(Ljava/lang/CharSequence;[Ljava/lang/CharSequence;)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn repeat() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let count = frame.pop()?.as_int().max(0) as usize;
+            let this_ref = frame.get_local(0)?;
+            let s = if let Value::ObjectRef(str_id) = this_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else { StdString::new() }
+            } else { StdString::new() };
+            let result = s.repeat(count);
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+            let ref_id = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.String".to_string(), "repeat".to_string(), "(I)Ljava/lang/String;".to_string(), false, Some(native_impl))
     }
 }
 

@@ -2489,6 +2489,275 @@ impl AtomicInteger {
     }
 }
 
+// ========== java.util.concurrent.atomic.AtomicLong ==========
+
+pub struct AtomicLong;
+
+impl AtomicLong {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_value() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Long(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "<init>".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "get".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Long(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "set".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn incrementAndGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    let new_val = old + 1;
+                    obj.fields.insert("value".to_string(), Value::Long(new_val));
+                    new_val
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "incrementAndGet".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn addAndGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let delta = frame.get_local(1)?.as_long();
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    let new_val = old + delta;
+                    obj.fields.insert("value".to_string(), Value::Long(new_val));
+                    new_val
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLong".to_string(), "addAndGet".to_string(), "(J)J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::init_value());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::set());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::incrementAndGet());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLong", AtomicLong::addAndGet());
+    }
+}
+
+// ========== java.util.concurrent.atomic.AtomicReference ==========
+
+pub struct AtomicReference;
+
+impl AtomicReference {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicReference".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_value() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), val);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("value") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), val);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReference".to_string(), "set".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReference", AtomicReference::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReference", AtomicReference::init_value());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReference", AtomicReference::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReference", AtomicReference::set());
+    }
+}
+
+// ========== java.util.concurrent.atomic.AtomicBoolean ==========
+
+pub struct AtomicBoolean;
+
+impl AtomicBoolean {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_value() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_bool();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Boolean(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "<init>".to_string(), "(Z)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Boolean(v) = v { Some(*v) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "get".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(1)?.as_bool();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Boolean(val));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "set".to_string(), "(Z)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getAndSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let new_val = frame.get_local(1)?.as_bool();
+            let this_ref = frame.get_local(0)?;
+            let old_val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Boolean(v) = v { Some(*v) } else { None })
+                        .unwrap_or(false);
+                    obj.fields.insert("value".to_string(), Value::Boolean(new_val));
+                    old
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(old_val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "getAndSet".to_string(), "(Z)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn compareAndSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let update = frame.get_local(2)?.as_bool();
+            let expect = frame.get_local(1)?.as_bool();
+            let this_ref = frame.get_local(0)?;
+            let mut success = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Boolean(v) = v { Some(*v) } else { None })
+                        .unwrap_or(false);
+                    if old == expect {
+                        obj.fields.insert("value".to_string(), Value::Boolean(update));
+                        success = true;
+                    }
+                }
+            }
+            frame.push(Value::Boolean(success))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicBoolean".to_string(), "compareAndSet".to_string(), "(ZZ)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::init_value());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::set());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::getAndSet());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicBoolean", AtomicBoolean::compareAndSet());
+    }
+}
+
 // ========== java.util.LinkedHashMap ==========
 
 pub struct LinkedHashMap;
@@ -2734,4 +3003,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Objects::register(jvm);
     Optional::register(jvm);
     AtomicInteger::register(jvm);
+    AtomicLong::register(jvm);
+    AtomicReference::register(jvm);
+    AtomicBoolean::register(jvm);
 }

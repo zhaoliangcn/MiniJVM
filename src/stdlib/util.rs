@@ -3187,6 +3187,229 @@ impl LinkedHashMap {
     }
 }
 
+// ========== java.util.Scanner ==========
+
+pub struct Scanner;
+
+impl Scanner {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let source = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("source".to_string(), source);
+                    obj.fields.insert("position".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, Some(native_impl))
+    }
+
+    fn get_input_string(jvm: &JVM, this_id: usize) -> String {
+        if let Some(obj) = jvm.heap.get(this_id) {
+            if let Some(Value::ObjectRef(source_id)) = obj.fields.get("source") {
+                if let Some(source_obj) = jvm.heap.get(*source_id) {
+                    if let Some(s) = &source_obj.string_value {
+                        return s.clone();
+                    }
+                }
+            }
+        }
+        String::new()
+    }
+
+    fn get_position(jvm: &JVM, this_id: usize) -> usize {
+        if let Some(obj) = jvm.heap.get(this_id) {
+            if let Some(Value::Int(pos)) = obj.fields.get("position") {
+                return *pos as usize;
+            }
+        }
+        0
+    }
+
+    fn set_position(jvm: &mut JVM, this_id: usize, pos: usize) {
+        if let Some(obj) = jvm.heap.get_mut(this_id) {
+            obj.fields.insert("position".to_string(), Value::Int(pos as i32));
+        }
+    }
+
+    pub fn nextInt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                // Skip whitespace
+                let mut p = pos;
+                while p < chars.len() && chars[p].is_whitespace() { p += 1; }
+                // Parse integer
+                let start = p;
+                if p < chars.len() && (chars[p] == '-' || chars[p] == '+') { p += 1; }
+                while p < chars.len() && chars[p].is_ascii_digit() { p += 1; }
+                if p > start {
+                    let num_str: String = chars[start..p].iter().collect();
+                    if let Ok(val) = num_str.parse::<i32>() {
+                        Self::set_position(jvm, *this_id, p);
+                        frame.push(Value::Int(val))?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "nextInt".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextLong() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                let mut p = pos;
+                while p < chars.len() && chars[p].is_whitespace() { p += 1; }
+                let start = p;
+                if p < chars.len() && (chars[p] == '-' || chars[p] == '+') { p += 1; }
+                while p < chars.len() && chars[p].is_ascii_digit() { p += 1; }
+                if p > start {
+                    let num_str: String = chars[start..p].iter().collect();
+                    if let Ok(val) = num_str.parse::<i64>() {
+                        Self::set_position(jvm, *this_id, p);
+                        frame.push(Value::Long(val))?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "nextLong".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextDouble() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                let mut p = pos;
+                while p < chars.len() && chars[p].is_whitespace() { p += 1; }
+                let start = p;
+                if p < chars.len() && (chars[p] == '-' || chars[p] == '+') { p += 1; }
+                while p < chars.len() && (chars[p].is_ascii_digit() || chars[p] == '.') { p += 1; }
+                if p > start {
+                    let num_str: String = chars[start..p].iter().collect();
+                    if let Ok(val) = num_str.parse::<f64>() {
+                        Self::set_position(jvm, *this_id, p);
+                        frame.push(Value::Double(val))?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Double(0.0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "nextDouble".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn next() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                let mut p = pos;
+                while p < chars.len() && chars[p].is_whitespace() { p += 1; }
+                let start = p;
+                while p < chars.len() && !chars[p].is_whitespace() { p += 1; }
+                if p > start {
+                    let token: String = chars[start..p].iter().collect();
+                    let s = HeapObject::new_string("java.lang.String".to_string(), token);
+                    let ref_id = jvm.allocate(s)?;
+                    Self::set_position(jvm, *this_id, p);
+                    frame.push(Value::ObjectRef(ref_id))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "next".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextLine() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                if pos < chars.len() {
+                    // Find end of line
+                    let mut p = pos;
+                    let mut skip_newline = false;
+                    if p < chars.len() && chars[p] == '\n' { skip_newline = true; p += 1; }
+                    if skip_newline || (p < chars.len() && chars[p] == '\r') { p += 1; }
+                    
+                    let start = p;
+                    while p < chars.len() && chars[p] != '\n' { p += 1; }
+                    let line: String = chars[start..p].iter().collect();
+                    // Skip past the newline
+                    if p < chars.len() && chars[p] == '\n' { p += 1; }
+                    let s = HeapObject::new_string("java.lang.String".to_string(), line);
+                    let ref_id = jvm.allocate(s)?;
+                    Self::set_position(jvm, *this_id, p);
+                    frame.push(Value::ObjectRef(ref_id))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "nextLine".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn hasNext() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mut has = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let input = Self::get_input_string(jvm, *this_id);
+                let pos = Self::get_position(jvm, *this_id);
+                let chars: Vec<char> = input.chars().collect();
+                let mut p = pos;
+                while p < chars.len() && chars[p].is_whitespace() { p += 1; }
+                has = p < chars.len();
+            }
+            frame.push(Value::Boolean(has))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Scanner".to_string(), "hasNext".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.util.Scanner".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::init());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::nextInt());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::nextLong());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::nextDouble());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::next());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::nextLine());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::hasNext());
+        jvm.method_area.add_native_method("java.util.Scanner", Scanner::close());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -3212,4 +3435,5 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicLong::register(jvm);
     AtomicReference::register(jvm);
     AtomicBoolean::register(jvm);
+    Scanner::register(jvm);
 }

@@ -1118,6 +1118,92 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::frequency());
         jvm.method_area.add_native_method("java.util.Collections", Collections::max());
         jvm.method_area.add_native_method("java.util.Collections", Collections::min());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::disjoint());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::replaceAll());
+    }
+}
+
+// ========== More Collections methods ==========
+
+impl Collections {
+    pub fn disjoint() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let b = frame.pop()?;
+            let a = frame.pop()?;
+            let mut disjoint = true;
+            // Extract elements from first collection
+            let mut elems_a = Vec::new();
+            if let Value::ObjectRef(coll_id) = a {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in 0..size.min(elements.len()) {
+                                elems_a.push(elements[i].clone());
+                            }
+                        }
+                    }
+                }
+            }
+            // Check against second collection
+            if let Value::ObjectRef(coll_id) = b {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in 0..size.min(elements.len()) {
+                                if elems_a.contains(&elements[i]) {
+                                    disjoint = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Boolean(disjoint))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "disjoint".to_string(), "(Ljava/util/Collection;Ljava/util/Collection;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn replaceAll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let new_val = frame.pop()?;
+            let old_val = frame.pop()?;
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..size.min(elements.len()) {
+                                if elements[i] == old_val {
+                                    elements[i] = new_val.clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "replaceAll".to_string(), "(Ljava/util/List;Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
     }
 }
 

@@ -396,6 +396,91 @@ impl HashMap {
         Method::new_native("java.util.HashMap".to_string(), "isEmpty".to_string(), "()Z".to_string(), false, Some(native_impl))
     }
 
+    pub fn keySet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    // Copy key data first
+                    let mut key_data = Vec::new();
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size.min(keys.len()) {
+                                key_data.push(keys[i].clone());
+                            }
+                        }
+                    }
+                    // Create a new HashSet with the keys
+                    let set = HeapObject::new("java.util.HashSet".to_string());
+                    let set_ref = jvm.allocate(set)?;
+                    let set_keys = HeapObject::new_array("[Ljava/lang/Object;".to_string(), key_data.len());
+                    let set_keys_ref = jvm.allocate(set_keys)?;
+                    if let Some(set_arr) = jvm.heap.get_mut(set_keys_ref) {
+                        if let Some(set_elems) = &mut set_arr.array_elements {
+                            for i in 0..key_data.len().min(set_elems.len()) {
+                                set_elems[i] = key_data[i].clone();
+                            }
+                        }
+                    }
+                    if let Some(set_obj) = jvm.heap.get_mut(set_ref) {
+                        set_obj.fields.insert("keys".to_string(), Value::ArrayRef(set_keys_ref));
+                        set_obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                    }
+                    frame.push(Value::ObjectRef(set_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "keySet".to_string(), "()Ljava/util/Set;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn clear() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract refs first, then drop the borrow
+                let (keys_ref, vals_ref) = if let Some(obj) = jvm.heap.get(*this_id) {
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (k_ref, v_ref)
+                } else { (0, 0) };
+                // Clear the size
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+                // Clear the keys and values arrays
+                if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                    if let Some(elements) = &mut keys_arr.array_elements {
+                        for e in elements.iter_mut() {
+                            *e = Value::Null;
+                        }
+                    }
+                }
+                if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                    if let Some(elements) = &mut vals_arr.array_elements {
+                        for e in elements.iter_mut() {
+                            *e = Value::Null;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "clear".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::init());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::init_capacity());
@@ -404,6 +489,8 @@ impl HashMap {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::get());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::containsKey());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::isEmpty());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::keySet());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::clear());
     }
 }
 

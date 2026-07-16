@@ -1257,6 +1257,62 @@ impl Arrays {
         jvm.method_area.add_native_method("java.util.Arrays", Arrays::toString());
         jvm.method_area.add_native_method("java.util.Arrays", Arrays::sort());
         jvm.method_area.add_native_method("java.util.Arrays", Arrays::binarySearch());
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::copyOf());
+        jvm.method_area.add_native_method("java.util.Arrays", Arrays::fill());
+    }
+}
+
+impl Arrays {
+    pub fn copyOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let new_len = frame.pop()?.as_int().max(0) as usize;
+            let original = frame.pop()?;
+            let result = if let Value::ArrayRef(arr_id) = original {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    let mut new_elems = vec![Value::Null; new_len.max(1)];
+                    if let Some(elements) = &arr_obj.array_elements {
+                        for i in 0..new_len.min(elements.len()).min(new_elems.len()) {
+                            new_elems[i] = elements[i].clone();
+                        }
+                    }
+                    let class_name = arr_obj.class_name.clone();
+                    let result = HeapObject {
+                        class_name,
+                        fields: std::collections::HashMap::new(),
+                        string_value: None,
+                        array_elements: Some(new_elems),
+                        array_length: new_len,
+                        monitor_owner: None,
+                        monitor_count: 0,
+                        generation: 0,
+                        age: 0,
+                    };
+                    let result_ref = jvm.allocate(result)?;
+                    Value::ArrayRef(result_ref)
+                } else { Value::Null }
+            } else { Value::Null };
+            frame.push(result)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Arrays".to_string(), "copyOf".to_string(), "([JI)[J".to_string(), true, Some(native_impl))
+    }
+
+    pub fn fill() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?;
+            let arr_ref = frame.pop()?;
+            if let Value::ArrayRef(arr_id) = arr_ref {
+                if let Some(arr_obj) = jvm.heap.get_mut(arr_id) {
+                    if let Some(elements) = &mut arr_obj.array_elements {
+                        for e in elements.iter_mut() {
+                            *e = val.clone();
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Arrays".to_string(), "fill".to_string(), "([IJ)V".to_string(), true, Some(native_impl))
     }
 }
 

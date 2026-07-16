@@ -286,6 +286,7 @@ impl ArrayList {
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::contains());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::clear());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::set());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::forEach());
     }
 }
 
@@ -352,6 +353,12 @@ impl ArrayList {
             Ok(())
         });
         Method::new_native("java.util.ArrayList".to_string(), "set".to_string(), "(ILjava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn forEach() -> Method {
+        // ArrayList.forEach - simplified: iterate without Consumer
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
+        Method::new_native("java.util.ArrayList".to_string(), "forEach".to_string(), "(Ljava/util/function/Consumer;)V".to_string(), false, Some(native_impl))
     }
 }
 
@@ -737,6 +744,142 @@ impl HashMap {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::values());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::entrySet());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::clear());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::computeIfAbsent());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::merge());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::forEach());
+    }
+}
+
+impl HashMap {
+    pub fn computeIfAbsent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _mapping_fn = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut size, keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, k_ref, v_ref)
+                };
+                // Check if key exists
+                let mut found = false;
+                let mut found_idx = 0;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        for (i, k) in keys.iter().enumerate() {
+                            if i >= size { break; }
+                            if values_equal(&*jvm, k, &key) { found = true; found_idx = i; break; }
+                        }
+                    }
+                }
+                if found {
+                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                        if let Some(vals) = &vals_arr.array_elements {
+                            if found_idx < vals.len() { frame.push(vals[found_idx].clone())?; return Ok(()); }
+                        }
+                    }
+                }
+                // Key not found, return null (simplified - no mapping function)
+                frame.push(Value::Null)?;
+                return Ok(());
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "computeIfAbsent".to_string(), "(Ljava/lang/Object;Ljava/util/function/Function;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn merge() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _remapping_fn = frame.pop()?;
+            let value = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut size, keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, k_ref, v_ref)
+                };
+                let mut found = false;
+                let mut found_idx = 0;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        for (i, k) in keys.iter().enumerate() {
+                            if i >= size { break; }
+                            if values_equal(&*jvm, k, &key) { found = true; found_idx = i; break; }
+                        }
+                    }
+                }
+                if found {
+                    // Update existing
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if found_idx < vals.len() {
+                                vals[found_idx] = value.clone();
+                            }
+                        }
+                    }
+                } else {
+                    // Add new entry
+                    let new_size = size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() { new_keys[i] = k.clone(); }
+                                *keys = new_keys;
+                            }
+                            if size < keys.len() { keys[size] = key; }
+                        }
+                    }
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if size >= vals.len() {
+                                let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, v) in vals.iter().enumerate() { new_vals[i] = v.clone(); }
+                                *vals = new_vals;
+                            }
+                            if size < vals.len() { vals[size] = value.clone(); }
+                        }
+                    }
+                    size = new_size;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+                frame.push(value)?;
+                return Ok(());
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "merge".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn forEach() -> Method {
+        // Simplified: no-op for HashMap forEach (requires BiConsumer)
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
+        Method::new_native("java.util.HashMap".to_string(), "forEach".to_string(), "(Ljava/util/function/BiConsumer;)V".to_string(), false, Some(native_impl))
     }
 }
 
@@ -4751,6 +4894,56 @@ impl Date {
     }
 }
 
+// ========== java.util.Queue ==========
+
+pub struct Queue;
+
+impl Queue {
+    pub fn offer() -> Method {
+        Method::new_native("java.util.Queue".to_string(), "offer".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn poll() -> Method {
+        Method::new_native("java.util.Queue".to_string(), "poll".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn peek() -> Method {
+        Method::new_native("java.util.Queue".to_string(), "peek".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn element() -> Method {
+        Method::new_native("java.util.Queue".to_string(), "element".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Queue", Queue::offer());
+        jvm.method_area.add_native_method("java.util.Queue", Queue::poll());
+        jvm.method_area.add_native_method("java.util.Queue", Queue::peek());
+        jvm.method_area.add_native_method("java.util.Queue", Queue::element());
+    }
+}
+
+// ========== java.util.Deque ==========
+
+pub struct Deque;
+
+impl Deque {
+    pub fn offerFirst() -> Method {
+        Method::new_native("java.util.Deque".to_string(), "offerFirst".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn offerLast() -> Method {
+        Method::new_native("java.util.Deque".to_string(), "offerLast".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn pollFirst() -> Method {
+        Method::new_native("java.util.Deque".to_string(), "pollFirst".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn pollLast() -> Method {
+        Method::new_native("java.util.Deque".to_string(), "pollLast".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Deque", Deque::offerFirst());
+        jvm.method_area.add_native_method("java.util.Deque", Deque::offerLast());
+        jvm.method_area.add_native_method("java.util.Deque", Deque::pollFirst());
+        jvm.method_area.add_native_method("java.util.Deque", Deque::pollLast());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -4768,6 +4961,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Arrays::register(jvm);
     Collections::register(jvm);
     Comparator::register(jvm);
+    Queue::register(jvm);
+    Deque::register(jvm);
     Iterator::register(jvm);
     Iterable::register(jvm);
     Objects::register(jvm);

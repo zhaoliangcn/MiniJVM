@@ -166,6 +166,113 @@ impl ArrayList {
         Method::new_native("java.util.ArrayList".to_string(), "isEmpty".to_string(), "()Z".to_string(), false, Some(native_impl))
     }
 
+    pub fn remove() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let index = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if index < current_size {
+                    let removed = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if index < elements.len() {
+                                elements[index].clone()
+                            } else { Value::Null }
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in index..current_size - 1 {
+                                elements[i] = elements[i + 1].clone();
+                            }
+                            if current_size > 0 { elements[current_size - 1] = Value::Null; }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(removed)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "remove".to_string(), "(I)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn indexOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut idx = -1;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let arr_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in 0..size {
+                                if i < elements.len() && elements[i] == elem {
+                                    idx = i as i32;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(idx))?;
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "indexOf".to_string(), "(Ljava/lang/Object;)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn contains() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut found = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let arr_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in 0..size {
+                                if i < elements.len() && elements[i] == elem {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Boolean(found))?;
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "contains".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::init());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::init_capacity());
@@ -173,6 +280,9 @@ impl ArrayList {
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::add());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::get());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::isEmpty());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::remove());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::indexOf());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::contains());
     }
 }
 

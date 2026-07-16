@@ -3674,6 +3674,112 @@ impl ReentrantLock {
     }
 }
 
+// ========== java.util.Date ==========
+
+pub struct Date;
+
+impl Date {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                use std::time::{SystemTime, UNIX_EPOCH};
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+                let millis = now.as_millis() as i64;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("fastTime".to_string(), Value::Long(millis));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Date".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_millis() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let millis = frame.get_local(1)?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("fastTime".to_string(), Value::Long(millis));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Date".to_string(), "<init>".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getTime() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let millis = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("fastTime")
+                        .and_then(|v| if let Value::Long(t) = v { Some(*t) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(millis))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Date".to_string(), "getTime".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn setTime() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let millis = frame.get_local(1)?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("fastTime".to_string(), Value::Long(millis));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Date".to_string(), "setTime".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let millis = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("fastTime")
+                        .and_then(|v| if let Value::Long(t) = v { Some(*t) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            // Simple date format: "EEE MMM dd HH:mm:ss zzz yyyy"
+            let secs = millis / 1000;
+            let days = secs / 86400;
+            let time_secs = secs % 86400;
+            let hours = time_secs / 3600;
+            let minutes = (time_secs % 3600) / 60;
+            let seconds = time_secs % 60;
+            // Approximate date from days since epoch
+            let year = 1970 + (days / 365) as i32;
+            let day_of_year = (days % 365) as i32;
+            let month = (day_of_year / 30).min(11);
+            let day = (day_of_year % 30 + 1).min(31);
+            let s = format!("{:02} {:02} {:02}:{:02}:{:02} UTC {}", 
+                month + 1, day, hours, minutes, seconds, year);
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+            let ref_id = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Date".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Date", Date::init());
+        jvm.method_area.add_native_method("java.util.Date", Date::init_millis());
+        jvm.method_area.add_native_method("java.util.Date", Date::getTime());
+        jvm.method_area.add_native_method("java.util.Date", Date::setTime());
+        jvm.method_area.add_native_method("java.util.Date", Date::toString());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -3700,5 +3806,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicReference::register(jvm);
     AtomicBoolean::register(jvm);
     ReentrantLock::register(jvm);
+    Date::register(jvm);
     Scanner::register(jvm);
 }

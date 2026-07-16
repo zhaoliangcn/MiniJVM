@@ -4039,6 +4039,9 @@ impl Comparator {
         jvm.method_area.add_native_method("java.util.Comparator", Comparator::compare());
         jvm.method_area.add_native_method("java.util.Comparator", Comparator::naturalOrder());
         jvm.method_area.add_native_method("java.util.Comparator", Comparator::reverseOrder());
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::thenComparing());
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::nullsFirst());
+        jvm.method_area.add_native_method("java.util.Comparator", Comparator::nullsLast());
     }
 }
 
@@ -4060,6 +4063,30 @@ impl Comparator {
             Ok(())
         });
         Method::new_native("java.util.Comparator".to_string(), "reverseOrder".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn thenComparing() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "thenComparing".to_string(), "(Ljava/util/Comparator;)Ljava/util/Comparator;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nullsFirst() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "nullsFirst".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn nullsLast() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "nullsLast".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
     }
 }
 

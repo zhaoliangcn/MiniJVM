@@ -513,7 +513,53 @@ impl String {
         jvm.method_area.add_native_method("java.lang.String", String::endsWith());
         jvm.method_area.add_native_method("java.lang.String", String::contains());
         jvm.method_area.add_native_method("java.lang.String", String::isEmpty());
+        jvm.method_area.add_native_method("java.lang.String", String::join());
         jvm.method_area.add_native_method("java.lang.String", String::split());
+    }
+}
+
+impl String {
+    pub fn join() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elements = frame.pop()?; // Object[] elements
+            let delim_ref = frame.pop()?; // String delimiter
+            let delimiter = if let Value::ObjectRef(str_id) = delim_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else { StdString::new() }
+            } else { StdString::new() };
+            
+            let mut result = StdString::new();
+            let mut first = true;
+            if let Value::ArrayRef(arr_id) = elements {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    if let Some(arr_elems) = &arr_obj.array_elements {
+                        for elem in arr_elems {
+                            if !first { result.push_str(&delimiter); }
+                            first = false;
+                            match elem {
+                                Value::ObjectRef(id) => {
+                                    if let Some(obj) = jvm.heap.get(*id) {
+                                        if let Some(s) = &obj.string_value {
+                                            result.push_str(s);
+                                        } else {
+                                            result.push_str(&obj.class_name);
+                                        }
+                                    }
+                                }
+                                Value::Null => result.push_str("null"),
+                                _ => result.push_str(&format!("{}", elem)),
+                            }
+                        }
+                    }
+                }
+            }
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+            let ref_id = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.String".to_string(), "join".to_string(), "(Ljava/lang/CharSequence;[Ljava/lang/CharSequence;)Ljava/lang/String;".to_string(), true, Some(native_impl))
     }
 }
 

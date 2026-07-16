@@ -284,6 +284,74 @@ impl ArrayList {
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::remove());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::indexOf());
         jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::contains());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::clear());
+        jvm.method_area.add_native_method("java.util.ArrayList", ArrayList::set());
+    }
+}
+
+impl ArrayList {
+    pub fn clear() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract arr_ref first, then drop the borrow
+                let arr_ref = if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0)
+                } else { 0 };
+                // Set size to 0
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+                // Clear the array
+                if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                    if let Some(elements) = &mut arr.array_elements {
+                        for e in elements.iter_mut() { *e = Value::Null; }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "clear".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let index = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if index < current_size {
+                    let old = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if index < elements.len() { elements[index].clone() } else { Value::Null }
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            if index < elements.len() { elements[index] = elem; }
+                        }
+                    }
+                    frame.push(old)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.ArrayList".to_string(), "set".to_string(), "(ILjava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
     }
 }
 

@@ -1191,6 +1191,12 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::nCopies());
         jvm.method_area.add_native_method("java.util.Collections", Collections::singleton());
         jvm.method_area.add_native_method("java.util.Collections", Collections::singletonMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::unmodifiableList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::unmodifiableMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::unmodifiableSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedSet());
     }
 }
 
@@ -1538,6 +1544,106 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "singletonMap".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn unmodifiableList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    // Create a wrapper list
+                    let wrapper = HeapObject::new("java.util.Collections$UnmodifiableList".to_string());
+                    let wrapper_ref = jvm.allocate(wrapper)?;
+                    if let Some(wrapper_obj) = jvm.heap.get_mut(wrapper_ref) {
+                        wrapper_obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                        wrapper_obj.fields.insert("size".to_string(), Value::Int(size));
+                    }
+                    frame.push(Value::ObjectRef(wrapper_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "unmodifiableList".to_string(), "(Ljava/util/List;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn unmodifiableMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let map_ref = frame.pop()?;
+            if let Value::ObjectRef(map_id) = map_ref {
+                if let Some(map_obj) = jvm.heap.get(map_id) {
+                    let keys_ref = map_obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = map_obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = map_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    let wrapper = HeapObject::new("java.util.Collections$UnmodifiableMap".to_string());
+                    let wrapper_ref = jvm.allocate(wrapper)?;
+                    if let Some(wrapper_obj) = jvm.heap.get_mut(wrapper_ref) {
+                        wrapper_obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                        wrapper_obj.fields.insert("values".to_string(), Value::ArrayRef(vals_ref));
+                        wrapper_obj.fields.insert("size".to_string(), Value::Int(size));
+                    }
+                    frame.push(Value::ObjectRef(wrapper_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "unmodifiableMap".to_string(), "(Ljava/util/Map;)Ljava/util/Map;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn unmodifiableSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?; // Return the same set (simplified)
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "unmodifiableSet".to_string(), "(Ljava/util/Set;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?; // type token (ignored)
+            let list_ref = frame.pop()?;
+            // Return the same list (type checking is simplified)
+            frame.push(list_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedList".to_string(), "(Ljava/util/List;Ljava/lang/Class;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?; // value type (ignored)
+            let _key_type_ref = frame.pop()?; // key type (ignored)
+            let map_ref = frame.pop()?;
+            frame.push(map_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedMap".to_string(), "(Ljava/util/Map;Ljava/lang/Class;Ljava/lang/Class;)Ljava/util/Map;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?;
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedSet".to_string(), "(Ljava/util/Set;Ljava/lang/Class;)Ljava/util/Set;".to_string(), true, Some(native_impl))
     }
 }
 

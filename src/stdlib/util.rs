@@ -2323,6 +2323,8 @@ impl Objects {
         jvm.method_area.add_native_method("java.util.Objects", Objects::toString());
         jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNull());
         jvm.method_area.add_native_method("java.util.Objects", Objects::compare());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::isNull());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::nonNull());
     }
 }
 
@@ -2378,6 +2380,24 @@ impl Objects {
             Ok(())
         });
         Method::new_native("java.util.Objects".to_string(), "compare".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/Comparator;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isNull() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let obj = frame.pop()?;
+            frame.push(Value::Boolean(obj.is_null()))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "isNull".to_string(), "(Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn nonNull() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let obj = frame.pop()?;
+            frame.push(Value::Boolean(!obj.is_null()))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "nonNull".to_string(), "(Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
     }
 }
 
@@ -4971,6 +4991,82 @@ impl Deque {
     }
 }
 
+// ========== java.util.Locale ==========
+
+pub struct Locale;
+
+impl Locale {
+    pub fn getDefault() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let locale = HeapObject::new("java.util.Locale".to_string());
+            let locale_ref = jvm.allocate(locale)?;
+            let lang = HeapObject::new_string("java.lang.String".to_string(), "en".to_string());
+            let lang_ref = jvm.allocate(lang)?;
+            let country = HeapObject::new_string("java.lang.String".to_string(), "US".to_string());
+            let country_ref = jvm.allocate(country)?;
+            if let Some(obj) = jvm.heap.get_mut(locale_ref) {
+                obj.fields.insert("language".to_string(), Value::ObjectRef(lang_ref));
+                obj.fields.insert("country".to_string(), Value::ObjectRef(country_ref));
+            }
+            frame.push(Value::ObjectRef(locale_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Locale".to_string(), "getDefault".to_string(), "()Ljava/util/Locale;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn getLanguage() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(lang_id)) = obj.fields.get("language") {
+                        if let Some(lang_obj) = jvm.heap.get(*lang_id) {
+                            if let Some(s) = &lang_obj.string_value {
+                                let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                let r = jvm.allocate(result)?;
+                                frame.push(Value::ObjectRef(r))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Locale".to_string(), "getLanguage".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getCountry() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(country_id)) = obj.fields.get("country") {
+                        if let Some(country_obj) = jvm.heap.get(*country_id) {
+                            if let Some(s) = &country_obj.string_value {
+                                let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                let r = jvm.allocate(result)?;
+                                frame.push(Value::ObjectRef(r))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Locale".to_string(), "getCountry".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Locale", Locale::getDefault());
+        jvm.method_area.add_native_method("java.util.Locale", Locale::getLanguage());
+        jvm.method_area.add_native_method("java.util.Locale", Locale::getCountry());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -4988,6 +5084,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Arrays::register(jvm);
     Collections::register(jvm);
     Comparator::register(jvm);
+    Locale::register(jvm);
     Queue::register(jvm);
     Deque::register(jvm);
     Iterator::register(jvm);

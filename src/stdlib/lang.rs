@@ -350,7 +350,111 @@ impl String {
     }
 
     pub fn format() -> Method {
-        Method::new_native("java.lang.String".to_string(), "format".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;".to_string(), true, None)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let args_ref = frame.pop()?; // Object[] args
+            let fmt_ref = frame.pop()?;  // String format
+            let format_str = if let Value::ObjectRef(str_id) = fmt_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else { StdString::new() }
+            } else { StdString::new() };
+            
+            // Extract args from the array
+            let mut args: Vec<Value> = Vec::new();
+            if let Value::ArrayRef(arr_id) = args_ref {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    if let Some(elements) = &arr_obj.array_elements {
+                        args = elements.clone();
+                    }
+                }
+            }
+            
+            let mut result = StdString::new();
+            let mut chars = format_str.chars().peekable();
+            let mut arg_idx = 0;
+            
+            while let Some(ch) = chars.next() {
+                if ch == '%' {
+                    match chars.next() {
+                        Some('s') => {
+                            if arg_idx < args.len() {
+                                let s = Self::value_to_string(jvm, &args[arg_idx]);
+                                result.push_str(&s);
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('d') => {
+                            if arg_idx < args.len() {
+                                match &args[arg_idx] {
+                                    Value::Int(v) => result.push_str(&v.to_string()),
+                                    Value::Long(v) => result.push_str(&v.to_string()),
+                                    _ => result.push_str("0"),
+                                }
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('f') => {
+                            if arg_idx < args.len() {
+                                match &args[arg_idx] {
+                                    Value::Float(v) => result.push_str(&format!("{:.6}", v)),
+                                    Value::Double(v) => result.push_str(&format!("{:.6}", v)),
+                                    Value::Int(v) => result.push_str(&format!("{}.0", v)),
+                                    _ => result.push_str("0.0"),
+                                }
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('x') => {
+                            if arg_idx < args.len() {
+                                match &args[arg_idx] {
+                                    Value::Int(v) => result.push_str(&format!("{:x}", v)),
+                                    Value::Long(v) => result.push_str(&format!("{:x}", v)),
+                                    _ => result.push_str("0"),
+                                }
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('n') => result.push('\n'),
+                        Some('%') => result.push('%'),
+                        Some(c) => { result.push('%'); result.push(c); }
+                        None => result.push('%'),
+                    }
+                } else {
+                    result.push(ch);
+                }
+            }
+            
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+            let ref_id = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.String".to_string(), "format".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    /// Helper: convert a Value to its string representation for formatting
+    fn value_to_string(jvm: &JVM, val: &Value) -> StdString {
+        match val {
+            Value::Null => "null".to_string(),
+            Value::ObjectRef(id) => {
+                if let Some(obj) = jvm.heap.get(*id) {
+                    if let Some(s) = &obj.string_value {
+                        s.clone()
+                    } else {
+                        format!("{}@{}", obj.class_name, id)
+                    }
+                } else { "null".to_string() }
+            }
+            Value::ArrayRef(id) => format!("Array@{}", id),
+            Value::Int(v) => v.to_string(),
+            Value::Long(v) => v.to_string(),
+            Value::Float(v) => v.to_string(),
+            Value::Double(v) => v.to_string(),
+            Value::Boolean(v) => v.to_string(),
+            Value::Byte(v) => v.to_string(),
+            Value::Short(v) => v.to_string(),
+            Value::Char(v) => v.to_string(),
+        }
     }
 
     pub fn startsWith() -> Method {

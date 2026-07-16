@@ -3940,6 +3940,88 @@ impl Properties {
         jvm.method_area.add_native_method("java.util.Properties", Properties::init());
         jvm.method_area.add_native_method("java.util.Properties", Properties::setProperty());
         jvm.method_area.add_native_method("java.util.Properties", Properties::getProperty());
+        jvm.method_area.add_native_method("java.util.Properties", Properties::load());
+    }
+}
+
+impl Properties {
+    pub fn load() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let in_ref = frame.pop()?; // InputStream
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Try to read from the InputStream by reading its string content
+                let mut content = String::new();
+                if let Value::ObjectRef(in_id) = &in_ref {
+                    if let Some(in_obj) = jvm.heap.get(*in_id) {
+                        if let Some(Value::ObjectRef(str_id)) = in_obj.fields.get("path") {
+                            if let Some(str_obj) = jvm.heap.get(*str_id) {
+                                if let Some(path) = &str_obj.string_value {
+                                    if let Ok(data) = std::fs::read_to_string(path) {
+                                        content = data;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // Parse the properties file content (key=value format)
+                let (keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (k_ref, v_ref)
+                };
+                let mut size = 0usize;
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') || line.starts_with('!') { continue; }
+                    if let Some(eq_pos) = line.find('=') {
+                        let key = line[..eq_pos].trim();
+                        let val = line[eq_pos+1..].trim();
+                        if !key.is_empty() {
+                            // Add to properties
+                            let key_obj = HeapObject::new_string("java.lang.String".to_string(), key.to_string());
+                            let val_obj = HeapObject::new_string("java.lang.String".to_string(), val.to_string());
+                            let key_ref = jvm.allocate(key_obj)?;
+                            let val_ref = jvm.allocate(val_obj)?;
+                            let new_size = size + 1;
+                            if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                                if let Some(keys) = &mut keys_arr.array_elements {
+                                    if size >= keys.len() {
+                                        let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                        for (i, k) in keys.iter().enumerate() { new_keys[i] = k.clone(); }
+                                        *keys = new_keys;
+                                    }
+                                    if size < keys.len() { keys[size] = Value::ObjectRef(key_ref); }
+                                }
+                            }
+                            if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                                if let Some(vals) = &mut vals_arr.array_elements {
+                                    if size >= vals.len() {
+                                        let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                        for (i, v) in vals.iter().enumerate() { new_vals[i] = v.clone(); }
+                                        *vals = new_vals;
+                                    }
+                                    if size < vals.len() { vals[size] = Value::ObjectRef(val_ref); }
+                                }
+                            }
+                            size = new_size;
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Properties".to_string(), "load".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, Some(native_impl))
     }
 }
 

@@ -3325,7 +3325,32 @@ impl UUID {
 
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.UUID", UUID::randomUUID());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::fromString());
         jvm.method_area.add_native_method("java.util.UUID", UUID::toString());
+    }
+}
+
+impl UUID {
+    pub fn fromString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.pop()?;
+            let uuid_str = if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else { String::new() }
+            } else { String::new() };
+            // Store the UUID string (simplified: just store the input string)
+            let obj = HeapObject::new_string("java.lang.String".to_string(), uuid_str);
+            let ref_id = jvm.allocate(obj)?;
+            let uuid_obj = HeapObject::new("java.util.UUID".to_string());
+            let uuid_ref = jvm.allocate(uuid_obj)?;
+            if let Some(u) = jvm.heap.get_mut(uuid_ref) {
+                u.fields.insert("value".to_string(), Value::ObjectRef(ref_id));
+            }
+            frame.push(Value::ObjectRef(uuid_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "fromString".to_string(), "(Ljava/lang/String;)Ljava/util/UUID;".to_string(), true, Some(native_impl))
     }
 }
 
@@ -5067,6 +5092,160 @@ impl Locale {
     }
 }
 
+// ========== java.util.BitSet ==========
+
+pub struct BitSet;
+
+impl BitSet {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[J".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("words".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.BitSet".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let bit = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            let mut result = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ArrayRef(words_ref)) = obj.fields.get("words") {
+                        let word_idx = bit / 64;
+                        let bit_idx = bit % 64;
+                        if let Some(words) = jvm.heap.get(*words_ref) {
+                            if let Some(elements) = &words.array_elements {
+                                if word_idx < elements.len() {
+                                    if let Value::Long(w) = &elements[word_idx] {
+                                        result = (*w >> bit_idx) & 1 == 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Boolean(result))?;
+            Ok(())
+        });
+        Method::new_native("java.util.BitSet".to_string(), "get".to_string(), "(I)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let bit = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract words_ref first, then drop the borrow
+                let (word_idx, bit_idx, words_ref) = if let Some(obj) = jvm.heap.get(*this_id) {
+                    let wi = bit / 64;
+                    let bi = bit % 64;
+                    let wr = obj.fields.get("words")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (wi, bi, wr)
+                } else { (0, 0, 0) };
+                // Ensure the array is large enough
+                if let Some(words) = jvm.heap.get_mut(words_ref) {
+                    if let Some(elements) = &mut words.array_elements {
+                        if word_idx >= elements.len() {
+                            let new_len = word_idx + 1;
+                            let mut new_elems = vec![Value::Long(0); new_len.max(10)];
+                            for (i, e) in elements.iter().enumerate() {
+                                if let Value::Long(v) = e { new_elems[i] = Value::Long(*v); }
+                            }
+                            *elements = new_elems;
+                        }
+                        if word_idx < elements.len() {
+                            let mut val = 0i64;
+                            if let Value::Long(v) = &elements[word_idx] { val = *v; }
+                            val |= 1i64 << bit_idx;
+                            elements[word_idx] = Value::Long(val);
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let size = word_idx * 64 + bit_idx + 1;
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.BitSet".to_string(), "set".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn clear() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let bit = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let word_idx = bit / 64;
+                    let bit_idx = bit % 64;
+                    let words_ref = obj.fields.get("words")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if let Some(words) = jvm.heap.get_mut(words_ref) {
+                        if let Some(elements) = &mut words.array_elements {
+                            if word_idx < elements.len() {
+                                let mut val = 0i64;
+                                if let Value::Long(v) = &elements[word_idx] { val = *v; }
+                                val &= !(1i64 << bit_idx);
+                                elements[word_idx] = Value::Long(val);
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.BitSet".to_string(), "clear".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn cardinality() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mut count = 0;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ArrayRef(words_ref)) = obj.fields.get("words") {
+                        if let Some(words) = jvm.heap.get(*words_ref) {
+                            if let Some(elements) = &words.array_elements {
+                                for elem in elements {
+                                    if let Value::Long(v) = elem {
+                                        count += v.count_ones() as i32;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(count))?;
+            Ok(())
+        });
+        Method::new_native("java.util.BitSet".to_string(), "cardinality".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.BitSet", BitSet::init());
+        jvm.method_area.add_native_method("java.util.BitSet", BitSet::get());
+        jvm.method_area.add_native_method("java.util.BitSet", BitSet::set());
+        jvm.method_area.add_native_method("java.util.BitSet", BitSet::clear());
+        jvm.method_area.add_native_method("java.util.BitSet", BitSet::cardinality());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -5080,6 +5259,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     PriorityQueue::register(jvm);
     Random::register(jvm);
     UUID::register(jvm);
+    BitSet::register(jvm);
     Base64::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);

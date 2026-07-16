@@ -40,6 +40,7 @@ fn run_jvm(classfile_path: &str) -> Result<(), JvmError> {
     // Register native/standard library classes (Bootstrap class loader)
     stdlib::lang::register_standard_classes(&mut jvm);
     stdlib::io::PrintStream::register(&mut jvm);
+    stdlib::io::register_io_classes(&mut jvm);
     stdlib::util::register_util_classes(&mut jvm);
     stdlib::lang::register_thread_natives(&mut jvm);
     

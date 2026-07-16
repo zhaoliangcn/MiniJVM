@@ -800,6 +800,125 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::emptyList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::sort());
         jvm.method_area.add_native_method("java.util.Collections", Collections::sort_with_comparator());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::reverse());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::shuffle());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::fill());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::frequency());
+    }
+}
+
+// ========== More Collections methods ==========
+
+impl Collections {
+    pub fn reverse() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..size / 2 {
+                                elements.swap(i, size - 1 - i);
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "reverse".to_string(), "(Ljava/util/List;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn shuffle() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            use std::time::{SystemTime, UNIX_EPOCH};
+                            for i in (1..size).rev() {
+                                let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+                                let j = ((ts.as_nanos() + i as u128) % (i + 1) as u128) as usize;
+                                elements.swap(i, j);
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "shuffle".to_string(), "(Ljava/util/List;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn fill() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = frame.pop()?;
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..size {
+                                if i < elements.len() {
+                                    elements[i] = obj.clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "fill".to_string(), "(Ljava/util/List;Ljava/lang/Object;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn frequency() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = frame.pop()?;
+            let coll_ref = frame.pop()?;
+            let mut count = 0;
+            if let Value::ObjectRef(coll_id) = coll_ref {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            for i in 0..size {
+                                if i < elements.len() && elements[i] == obj {
+                                    count += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(count))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "frequency".to_string(), "(Ljava/util/Collection;Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
     }
 }
 

@@ -714,9 +714,109 @@ impl Collections {
         Method::new_native("java.util.Collections".to_string(), "emptyList".to_string(), "()Ljava/util/List;".to_string(), true, Some(native_impl))
     }
 
+    pub fn sort() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let comp = frame.pop()?; // Comparator (optional)
+            let list_ref = frame.pop()?; // List
+            if let Value::ObjectRef(list_id) = list_ref {
+                // Get the backing array from the list
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if arr_ref == 0 { return Ok(()); }
+                    
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    
+                    // Simple bubble sort on the backing array
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..size {
+                                for j in 0..size - i - 1 {
+                                    // Compare elements using the comparator if available
+                                    let should_swap = if !comp.is_null() {
+                                        // Call comparator.compare(a, b) - simplified
+                                        // For now, just compare by hash code
+                                        let a = &elements[j];
+                                        let b = &elements[j + 1];
+                                        hash_for_sort(a) > hash_for_sort(b)
+                                    } else {
+                                        // Natural ordering: compare by hash code
+                                        let a = &elements[j];
+                                        let b = &elements[j + 1];
+                                        hash_for_sort(a) > hash_for_sort(b)
+                                    };
+                                    if should_swap {
+                                        elements.swap(j, j + 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "sort".to_string(), "(Ljava/util/List;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn sort_with_comparator() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let comp = frame.pop()?;
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if arr_ref == 0 { return Ok(()); }
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..size {
+                                for j in 0..size - i - 1 {
+                                    let a = &elements[j];
+                                    let b = &elements[j + 1];
+                                    if hash_for_sort(a) > hash_for_sort(b) {
+                                        elements.swap(j, j + 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "sort".to_string(), "(Ljava/util/List;Ljava/util/Comparator;)V".to_string(), true, Some(native_impl))
+    }
+
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.Collections", Collections::singletonList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::emptyList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::sort());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::sort_with_comparator());
+    }
+}
+
+/// Helper: get a sort-friendly hash from a Value
+fn hash_for_sort(val: &Value) -> i64 {
+    match val {
+        Value::Int(v) => *v as i64,
+        Value::Long(v) => *v,
+        Value::Float(v) => *v as i64,
+        Value::Double(v) => *v as i64,
+        Value::Byte(v) => *v as i64,
+        Value::Short(v) => *v as i64,
+        Value::Char(v) => *v as i64,
+        Value::Boolean(v) => if *v { 1 } else { 0 },
+        Value::ObjectRef(id) => *id as i64,
+        Value::ArrayRef(id) => *id as i64,
+        Value::Null => 0,
     }
 }
 

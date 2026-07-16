@@ -891,6 +891,8 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::shuffle());
         jvm.method_area.add_native_method("java.util.Collections", Collections::fill());
         jvm.method_area.add_native_method("java.util.Collections", Collections::frequency());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::max());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::min());
     }
 }
 
@@ -1006,6 +1008,76 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "frequency".to_string(), "(Ljava/util/Collection;Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn max() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let coll_ref = frame.pop()?;
+            if let Value::ObjectRef(coll_id) = coll_ref {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if size > 0 {
+                        if let Some(arr) = jvm.heap.get(arr_ref) {
+                            if let Some(elements) = &arr.array_elements {
+                                let mut max_idx = 0;
+                                for i in 1..size {
+                                    if i < elements.len() && hash_for_sort(&elements[i]) > hash_for_sort(&elements[max_idx]) {
+                                        max_idx = i;
+                                    }
+                                }
+                                if max_idx < elements.len() {
+                                    frame.push(elements[max_idx].clone())?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "max".to_string(), "(Ljava/util/Collection;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn min() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let coll_ref = frame.pop()?;
+            if let Value::ObjectRef(coll_id) = coll_ref {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if size > 0 {
+                        if let Some(arr) = jvm.heap.get(arr_ref) {
+                            if let Some(elements) = &arr.array_elements {
+                                let mut min_idx = 0;
+                                for i in 1..size {
+                                    if i < elements.len() && hash_for_sort(&elements[i]) < hash_for_sort(&elements[min_idx]) {
+                                        min_idx = i;
+                                    }
+                                }
+                                if min_idx < elements.len() {
+                                    frame.push(elements[min_idx].clone())?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "min".to_string(), "(Ljava/util/Collection;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
     }
 }
 
@@ -3410,6 +3482,88 @@ impl Scanner {
     }
 }
 
+// ========== java.util.concurrent.locks.ReentrantLock ==========
+
+pub struct ReentrantLock;
+
+impl ReentrantLock {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.locks.ReentrantLock".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn lock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    // Track the owning thread
+                    obj.fields.insert("owner".to_string(), Value::Int(jvm.current_thread_id as i32));
+                    let count = obj.fields.get("holdCount")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("holdCount".to_string(), Value::Int(count + 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantLock".to_string(), "lock".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn unlock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let count = obj.fields.get("holdCount")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0);
+                    if count > 1 {
+                        obj.fields.insert("holdCount".to_string(), Value::Int(count - 1));
+                    } else {
+                        obj.fields.insert("owner".to_string(), Value::Int(-1));
+                        obj.fields.insert("holdCount".to_string(), Value::Int(0));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantLock".to_string(), "unlock".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn tryLock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mut acquired = true;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let owner = obj.fields.get("owner")
+                        .and_then(|v| if let Value::Int(o) = v { Some(*o) } else { None })
+                        .unwrap_or(-1);
+                    if owner == -1 || owner == jvm.current_thread_id as i32 {
+                        obj.fields.insert("owner".to_string(), Value::Int(jvm.current_thread_id as i32));
+                        let count = obj.fields.get("holdCount")
+                            .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                            .unwrap_or(0);
+                        obj.fields.insert("holdCount".to_string(), Value::Int(count + 1));
+                    } else {
+                        acquired = false;
+                    }
+                }
+            }
+            frame.push(Value::Boolean(acquired))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantLock".to_string(), "tryLock".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantLock", ReentrantLock::init());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantLock", ReentrantLock::lock());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantLock", ReentrantLock::unlock());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantLock", ReentrantLock::tryLock());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -3435,5 +3589,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicLong::register(jvm);
     AtomicReference::register(jvm);
     AtomicBoolean::register(jvm);
+    ReentrantLock::register(jvm);
     Scanner::register(jvm);
 }

@@ -1353,6 +1353,314 @@ impl TreeMap {
     }
 }
 
+// ========== java.util.LinkedHashSet ==========
+
+pub struct LinkedHashSet;
+
+impl LinkedHashSet {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let keys_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let keys_ref = jvm.allocate(keys_arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.LinkedHashSet".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (current_size, keys_ref, found) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let mut f = false;
+                    if let Some(keys_arr) = jvm.heap.get(k_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            f = keys.iter().any(|k| *k == elem);
+                        }
+                    }
+                    (size, k_ref, f)
+                };
+                if !found {
+                    let new_size = current_size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if current_size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() {
+                                    new_keys[i] = k.clone();
+                                }
+                                *keys = new_keys;
+                            }
+                            if current_size < keys.len() {
+                                keys[current_size] = elem;
+                            }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                    }
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.LinkedHashSet".to_string(), "add".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.LinkedHashSet".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.LinkedHashSet", LinkedHashSet::init());
+        jvm.method_area.add_native_method("java.util.LinkedHashSet", LinkedHashSet::add());
+        jvm.method_area.add_native_method("java.util.LinkedHashSet", LinkedHashSet::size());
+    }
+}
+
+// ========== java.util.PriorityQueue ==========
+
+pub struct PriorityQueue;
+
+impl PriorityQueue {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("queue".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.PriorityQueue".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        // Simplified: just append to the array (no heap ordering)
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (current_size, queue_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let q_ref = obj.fields.get("queue")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, q_ref)
+                };
+                let new_size = current_size + 1;
+                if let Some(queue) = jvm.heap.get_mut(queue_ref) {
+                    if let Some(elements) = &mut queue.array_elements {
+                        if current_size >= elements.len() {
+                            let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                            for (i, e) in elements.iter().enumerate() {
+                                new_elems[i] = e.clone();
+                            }
+                            *elements = new_elems;
+                        }
+                        if current_size < elements.len() {
+                            elements[current_size] = elem;
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.PriorityQueue".to_string(), "add".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn peek() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let queue_ref = obj.fields.get("queue")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if let Some(queue) = jvm.heap.get(queue_ref) {
+                        if let Some(elements) = &queue.array_elements {
+                            if !elements.is_empty() {
+                                frame.push(elements[0].clone())?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.PriorityQueue".to_string(), "peek".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn poll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (queue_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let q_ref = obj.fields.get("queue")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (q_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(queue) = jvm.heap.get(queue_ref) {
+                        if let Some(elements) = &queue.array_elements {
+                            elements[0].clone()
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(queue) = jvm.heap.get_mut(queue_ref) {
+                        if let Some(elements) = &mut queue.array_elements {
+                            for i in 0..current_size - 1 {
+                                elements[i] = elements[i + 1].clone();
+                            }
+                            if current_size > 0 {
+                                elements[current_size - 1] = Value::Null;
+                            }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.PriorityQueue".to_string(), "poll".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.PriorityQueue".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.PriorityQueue", PriorityQueue::init());
+        jvm.method_area.add_native_method("java.util.PriorityQueue", PriorityQueue::add());
+        jvm.method_area.add_native_method("java.util.PriorityQueue", PriorityQueue::peek());
+        jvm.method_area.add_native_method("java.util.PriorityQueue", PriorityQueue::poll());
+        jvm.method_area.add_native_method("java.util.PriorityQueue", PriorityQueue::size());
+    }
+}
+
+// ========== java.util.UUID ==========
+
+pub struct UUID;
+
+impl UUID {
+    pub fn randomUUID() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+            let most_sig = (ts.as_nanos() & 0xFFFF_FFFF_FFFF_0FFF) | 0x0000_0000_0000_4000;
+            let least_sig = (ts.as_nanos() & 0x3FFF_FFFF_FFFF_FFFF) | 0x8000_0000_0000_0000;
+            let uuid_str = format!("{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+                (most_sig >> 32) as u32,
+                (most_sig >> 16) as u16 & 0xFFFF,
+                most_sig as u16 & 0xFFFF,
+                (least_sig >> 48) as u16,
+                least_sig & 0xFFFF_FFFF_FFFF);
+            let obj = HeapObject::new_string("java.lang.String".to_string(), uuid_str);
+            let ref_id = jvm.allocate(obj)?;
+            if let Value::ObjectRef(this_id) = frame.get_local(0)? {
+                if let Some(uuid_obj) = jvm.heap.get_mut(*this_id) {
+                    uuid_obj.fields.insert("value".to_string(), Value::ObjectRef(ref_id));
+                }
+            }
+            frame.push(Value::ObjectRef(ref_id))?;
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "randomUUID".to_string(), "()Ljava/util/UUID;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(str_id)) = obj.fields.get("value") {
+                        if let Some(str_obj) = jvm.heap.get(*str_id) {
+                            if let Some(s) = &str_obj.string_value {
+                                let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                let r = jvm.allocate(result)?;
+                                frame.push(Value::ObjectRef(r))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.UUID", UUID::randomUUID());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::toString());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -1360,6 +1668,9 @@ pub fn register_util_classes(jvm: &mut JVM) {
     HashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);
+    LinkedHashSet::register(jvm);
+    PriorityQueue::register(jvm);
+    UUID::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);
     Iterator::register(jvm);

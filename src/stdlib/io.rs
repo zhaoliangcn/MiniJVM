@@ -636,9 +636,261 @@ impl File_ {
     }
 }
 
+// ========== java.io.ByteArrayInputStream ==========
+
+pub struct ByteArrayInputStream;
+
+impl ByteArrayInputStream {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let buf_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("buf".to_string(), buf_ref);
+                    obj.fields.insert("pos".to_string(), Value::Int(0));
+                    obj.fields.insert("count".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayInputStream".to_string(), "<init>".to_string(), "([B)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn read() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let pos = obj.fields.get("pos")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(Value::ArrayRef(buf_id)) = obj.fields.get("buf") {
+                        if let Some(buf) = jvm.heap.get(*buf_id) {
+                            if let Some(elements) = &buf.array_elements {
+                                if pos < elements.len() {
+                                    let byte = match &elements[pos] {
+                                        Value::Byte(b) => *b as i32,
+                                        Value::Int(i) => *i,
+                                        _ => 0,
+                                    };
+                                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                                        obj.fields.insert("pos".to_string(), Value::Int((pos + 1) as i32));
+                                    }
+                                    frame.push(Value::Int(byte))?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(-1))?;
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayInputStream".to_string(), "read".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn available() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mut avail = 0;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let pos = obj.fields.get("pos")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(Value::ArrayRef(buf_id)) = obj.fields.get("buf") {
+                        if let Some(buf) = jvm.heap.get(*buf_id) {
+                            if let Some(elements) = &buf.array_elements {
+                                if pos < elements.len() {
+                                    avail = (elements.len() - pos) as i32;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Int(avail))?;
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayInputStream".to_string(), "available".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ByteArrayInputStream", ByteArrayInputStream::init());
+        jvm.method_area.add_native_method("java.io.ByteArrayInputStream", ByteArrayInputStream::read());
+        jvm.method_area.add_native_method("java.io.ByteArrayInputStream", ByteArrayInputStream::available());
+    }
+}
+
+// ========== java.io.ByteArrayOutputStream ==========
+
+pub struct ByteArrayOutputStream;
+
+impl ByteArrayOutputStream {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[B".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("buf".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("count".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayOutputStream".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn write() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let byte = frame.get_local(1)?.as_int() as u8;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (current_size, buf_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let b_ref = obj.fields.get("buf")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, b_ref)
+                };
+                let new_size = current_size + 1;
+                if let Some(buf) = jvm.heap.get_mut(buf_ref) {
+                    if let Some(elements) = &mut buf.array_elements {
+                        if current_size >= elements.len() {
+                            let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(32)];
+                            for (i, e) in elements.iter().enumerate() {
+                                new_elems[i] = e.clone();
+                            }
+                            *elements = new_elems;
+                        }
+                        if current_size < elements.len() {
+                            elements[current_size] = Value::Byte(byte as i8);
+                        }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("count".to_string(), Value::Int(new_size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayOutputStream".to_string(), "write".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toByteArray() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let buf_ref = obj.fields.get("buf")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let count = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    // Copy data from buf first
+                    let mut buf_data = Vec::new();
+                    if let Some(buf) = jvm.heap.get(buf_ref) {
+                        if let Some(buf_elems) = &buf.array_elements {
+                            for i in 0..count.min(buf_elems.len()) {
+                                buf_data.push(buf_elems[i].clone());
+                            }
+                        }
+                    }
+                    // Create a new array with exact size
+                    let result = HeapObject::new_array("[B".to_string(), count);
+                    let result_ref = jvm.allocate(result)?;
+                    if let Some(result_arr) = jvm.heap.get_mut(result_ref) {
+                        if let Some(result_elems) = &mut result_arr.array_elements {
+                            for i in 0..buf_data.len().min(result_elems.len()) {
+                                result_elems[i] = buf_data[i].clone();
+                            }
+                        }
+                    }
+                    frame.push(Value::ArrayRef(result_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayOutputStream".to_string(), "toByteArray".to_string(), "()[B".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayOutputStream".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let buf_ref = obj.fields.get("buf")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let count = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let mut bytes = Vec::new();
+                    if let Some(buf) = jvm.heap.get(buf_ref) {
+                        if let Some(elements) = &buf.array_elements {
+                            for i in 0..count.min(elements.len()) {
+                                match &elements[i] {
+                                    Value::Byte(b) => bytes.push(*b as u8),
+                                    Value::Int(i) => bytes.push(*i as u8),
+                                    _ => bytes.push(0),
+                                }
+                            }
+                        }
+                    }
+                    let s = String::from_utf8_lossy(&bytes).to_string();
+                    let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                    let str_ref = jvm.allocate(str_obj)?;
+                    frame.push(Value::ObjectRef(str_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.io.ByteArrayOutputStream".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ByteArrayOutputStream", ByteArrayOutputStream::init());
+        jvm.method_area.add_native_method("java.io.ByteArrayOutputStream", ByteArrayOutputStream::write());
+        jvm.method_area.add_native_method("java.io.ByteArrayOutputStream", ByteArrayOutputStream::toByteArray());
+        jvm.method_area.add_native_method("java.io.ByteArrayOutputStream", ByteArrayOutputStream::size());
+        jvm.method_area.add_native_method("java.io.ByteArrayOutputStream", ByteArrayOutputStream::toString());
+    }
+}
+
 /// Register all IO classes with the JVM.
 pub fn register_io_classes(jvm: &mut JVM) {
     FileInputStream::register(jvm);
     FileOutputStream::register(jvm);
     File_::register(jvm);
+    ByteArrayInputStream::register(jvm);
+    ByteArrayOutputStream::register(jvm);
 }

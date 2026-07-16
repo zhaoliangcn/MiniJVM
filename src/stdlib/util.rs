@@ -667,6 +667,7 @@ impl HashMap {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::isEmpty());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::keySet());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::values());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::entrySet());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::clear());
     }
 }
@@ -716,6 +717,73 @@ impl HashMap {
             Ok(())
         });
         Method::new_native("java.util.HashMap".to_string(), "values".to_string(), "()Ljava/util/Collection;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn entrySet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract key/value data first
+                let (keys_data, vals_data) = if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let mut kd = Vec::new();
+                    let mut vd = Vec::new();
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size.min(keys.len()) { kd.push(keys[i].clone()); }
+                        }
+                    }
+                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                        if let Some(vals) = &vals_arr.array_elements {
+                            for i in 0..size.min(vals.len()) { vd.push(vals[i].clone()); }
+                        }
+                    }
+                    (kd, vd)
+                } else { (Vec::new(), Vec::new()) };
+                
+                // Create entry objects and the set
+                let mut entry_refs = Vec::new();
+                for i in 0..keys_data.len().min(vals_data.len()) {
+                    let entry = HeapObject::new("java.util.AbstractMap$SimpleEntry".to_string());
+                    let entry_ref = jvm.allocate(entry)?;
+                    if let Some(entry_obj) = jvm.heap.get_mut(entry_ref) {
+                        entry_obj.fields.insert("key".to_string(), keys_data[i].clone());
+                        entry_obj.fields.insert("value".to_string(), vals_data[i].clone());
+                    }
+                    entry_refs.push(Value::ObjectRef(entry_ref));
+                }
+                
+                // Create a HashSet with the entries
+                let set = HeapObject::new("java.util.HashSet".to_string());
+                let set_ref = jvm.allocate(set)?;
+                let set_keys = HeapObject::new_array("[Ljava/lang/Object;".to_string(), entry_refs.len());
+                let set_keys_ref = jvm.allocate(set_keys)?;
+                if let Some(set_arr) = jvm.heap.get_mut(set_keys_ref) {
+                    if let Some(set_elems) = &mut set_arr.array_elements {
+                        for i in 0..entry_refs.len().min(set_elems.len()) {
+                            set_elems[i] = entry_refs[i].clone();
+                        }
+                    }
+                }
+                if let Some(set_obj) = jvm.heap.get_mut(set_ref) {
+                    set_obj.fields.insert("keys".to_string(), Value::ArrayRef(set_keys_ref));
+                    set_obj.fields.insert("size".to_string(), Value::Int(entry_refs.len() as i32));
+                }
+                frame.push(Value::ObjectRef(set_ref))?;
+                return Ok(());
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "entrySet".to_string(), "()Ljava/util/Set;".to_string(), false, Some(native_impl))
     }
 }
 

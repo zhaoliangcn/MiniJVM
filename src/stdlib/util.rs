@@ -666,7 +666,56 @@ impl HashMap {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::containsKey());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::isEmpty());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::keySet());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::values());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::clear());
+    }
+}
+
+impl HashMap {
+    pub fn values() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let vals_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    // Copy value data
+                    let mut val_data = Vec::new();
+                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                        if let Some(vals) = &vals_arr.array_elements {
+                            for i in 0..size.min(vals.len()) {
+                                val_data.push(vals[i].clone());
+                            }
+                        }
+                    }
+                    // Create a new ArrayList with the values
+                    let list = HeapObject::new("java.util.ArrayList".to_string());
+                    let list_ref = jvm.allocate(list)?;
+                    let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), val_data.len());
+                    let arr_ref = jvm.allocate(arr)?;
+                    if let Some(arr_obj) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elems) = &mut arr_obj.array_elements {
+                            for i in 0..val_data.len().min(elems.len()) {
+                                elems[i] = val_data[i].clone();
+                            }
+                        }
+                    }
+                    if let Some(list_obj) = jvm.heap.get_mut(list_ref) {
+                        list_obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                        list_obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                    }
+                    frame.push(Value::ObjectRef(list_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "values".to_string(), "()Ljava/util/Collection;".to_string(), false, Some(native_impl))
     }
 }
 

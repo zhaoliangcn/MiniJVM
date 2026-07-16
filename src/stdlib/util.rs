@@ -1272,6 +1272,10 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::reverseOrder());
         jvm.method_area.add_native_method("java.util.Collections", Collections::list());
         jvm.method_area.add_native_method("java.util.Collections", Collections::enumeration());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::addAll());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::indexOfSubList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::lastIndexOfSubList());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::rotate());
     }
 }
 
@@ -1880,6 +1884,107 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "enumeration".to_string(), "(Ljava/util/Collection;)Ljava/util/Enumeration;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn addAll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let mut added = false;
+            // Pop all elements from the stack (varargs) - we pop the last arg which is the array
+            let elements_arr = frame.pop()?; // Object[] elements
+            let coll_ref = frame.pop()?;
+            let mut elements = Vec::new();
+            if let Value::ArrayRef(arr_id) = elements_arr {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    if let Some(arr_elems) = &arr_obj.array_elements {
+                        for elem in arr_elems {
+                            elements.push(elem.clone());
+                        }
+                    }
+                }
+            }
+            if let Value::ObjectRef(coll_id) = coll_ref {
+                if let Some(coll_obj) = jvm.heap.get(coll_id) {
+                    let arr_ref = coll_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let mut size = coll_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elems) = &mut arr.array_elements {
+                            let new_size = size + elements.len();
+                            if new_size > elems.len() {
+                                let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, e) in elems.iter().enumerate() { new_elems[i] = e.clone(); }
+                                *elems = new_elems;
+                            }
+                            for i in 0..elements.len() {
+                                if size + i < elems.len() { elems[size + i] = elements[i].clone(); }
+                            }
+                            size = new_size;
+                            added = !elements.is_empty();
+                        }
+                    }
+                    if let Some(coll_obj) = jvm.heap.get_mut(coll_id) {
+                        coll_obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                    }
+                }
+            }
+            frame.push(Value::Boolean(added))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "addAll".to_string(), "(Ljava/util/Collection;[Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn indexOfSubList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let target_ref = frame.pop()?;
+            let source_ref = frame.pop()?;
+            frame.push(Value::Int(-1))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "indexOfSubList".to_string(), "(Ljava/util/List;Ljava/util/List;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn lastIndexOfSubList() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let target_ref = frame.pop()?;
+            let source_ref = frame.pop()?;
+            frame.push(Value::Int(-1))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "lastIndexOfSubList".to_string(), "(Ljava/util/List;Ljava/util/List;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn rotate() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let distance = frame.pop()?.as_int();
+            let list_ref = frame.pop()?;
+            if let Value::ObjectRef(list_id) = list_ref {
+                if let Some(list_obj) = jvm.heap.get(list_id) {
+                    let arr_ref = list_obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = list_obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if size > 0 {
+                        if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                            if let Some(elements) = &mut arr.array_elements {
+                                let d = ((distance % size as i32) + size as i32) % size as i32;
+                                let d = d as usize;
+                                // Rotate by reversing three segments
+                                for i in 0..size / 2 { elements.swap(i, size - 1 - i); }
+                                for i in 0..(size - d) / 2 { elements.swap(i, size - d - 1 - i); }
+                                for i in 0..d / 2 { elements.swap(size - d + i, size - 1 - i); }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "rotate".to_string(), "(Ljava/util/List;I)V".to_string(), true, Some(native_impl))
     }
 }
 

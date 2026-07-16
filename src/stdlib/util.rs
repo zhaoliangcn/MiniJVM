@@ -1678,12 +1678,103 @@ impl LinkedList {
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::init());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::add());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::addFirst());
+        jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::addLast());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::get());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::getFirst());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::getLast());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::size());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::isEmpty());
         jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::remove());
+        jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::removeFirst());
+        jvm.method_area.add_native_method("java.util.LinkedList", LinkedList::removeLast());
+    }
+}
+
+impl LinkedList {
+    pub fn addLast() -> Method {
+        // Same as add()
+        LinkedList::add()
+    }
+
+    pub fn removeFirst() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if !elements.is_empty() { elements[0].clone() } else { Value::Null }
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..current_size - 1 {
+                                elements[i] = elements[i + 1].clone();
+                            }
+                            if current_size > 0 { elements[current_size - 1] = Value::Null; }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.LinkedList".to_string(), "removeFirst".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn removeLast() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if current_size - 1 < elements.len() { elements[current_size - 1].clone() } else { Value::Null }
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            elements[current_size - 1] = Value::Null;
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.LinkedList".to_string(), "removeLast".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
     }
 }
 

@@ -1509,6 +1509,34 @@ impl Integer {
         Method::new_native("java.lang.Integer".to_string(), "toHexString".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
     }
 
+    pub fn toBinaryString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(i) = val {
+                let s = format!("{:b}", i);
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "toBinaryString".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toOctalString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Int(i) = val {
+                let s = format!("{:o}", i);
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Integer".to_string(), "toOctalString".to_string(), "(I)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
     pub fn MAX_VALUE() -> Method {
         let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
             frame.push(Value::Int(i32::MAX))?;
@@ -1558,6 +1586,8 @@ impl Integer {
         jvm.method_area.add_native_method("java.lang.Integer", Integer::valueOf_string());
         jvm.method_area.add_native_method("java.lang.Integer", Integer::toString());
         jvm.method_area.add_native_method("java.lang.Integer", Integer::toHexString());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::toBinaryString());
+        jvm.method_area.add_native_method("java.lang.Integer", Integer::toOctalString());
         jvm.method_area.add_native_method("java.lang.Integer", Integer::MAX_VALUE());
         jvm.method_area.add_native_method("java.lang.Integer", Integer::MIN_VALUE());
         jvm.method_area.add_native_method("java.lang.Integer", Integer::SIZE());

@@ -1188,6 +1188,9 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::min());
         jvm.method_area.add_native_method("java.util.Collections", Collections::disjoint());
         jvm.method_area.add_native_method("java.util.Collections", Collections::replaceAll());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::nCopies());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::singleton());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::singletonMap());
     }
 }
 
@@ -1458,6 +1461,84 @@ impl Collections {
         });
         Method::new_native("java.util.Collections".to_string(), "min".to_string(), "(Ljava/util/Collection;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
     }
+
+    pub fn nCopies() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = frame.pop()?;
+            let n = frame.pop()?.as_int().max(0) as usize;
+            let list = HeapObject::new("java.util.ArrayList".to_string());
+            let list_ref = jvm.allocate(list)?;
+            let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), n);
+            let arr_ref = jvm.allocate(arr)?;
+            if let Some(arr_obj) = jvm.heap.get_mut(arr_ref) {
+                if let Some(elements) = &mut arr_obj.array_elements {
+                    for i in 0..n.min(elements.len()) {
+                        elements[i] = obj.clone();
+                    }
+                }
+            }
+            if let Some(list_obj) = jvm.heap.get_mut(list_ref) {
+                list_obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                list_obj.fields.insert("size".to_string(), Value::Int(n as i32));
+            }
+            frame.push(Value::ObjectRef(list_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "nCopies".to_string(), "(ILjava/lang/Object;)Ljava/util/List;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn singleton() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj = frame.pop()?;
+            let set = HeapObject::new("java.util.HashSet".to_string());
+            let set_ref = jvm.allocate(set)?;
+            let keys = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 1);
+            let keys_ref = jvm.allocate(keys)?;
+            if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                if let Some(elements) = &mut keys_arr.array_elements {
+                    if !elements.is_empty() { elements[0] = obj; }
+                }
+            }
+            if let Some(set_obj) = jvm.heap.get_mut(set_ref) {
+                set_obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                set_obj.fields.insert("size".to_string(), Value::Int(1));
+            }
+            frame.push(Value::ObjectRef(set_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "singleton".to_string(), "(Ljava/lang/Object;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn singletonMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let key = frame.pop()?;
+            let map = HeapObject::new("java.util.HashMap".to_string());
+            let map_ref = jvm.allocate(map)?;
+            let keys = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 1);
+            let vals = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 1);
+            let keys_ref = jvm.allocate(keys)?;
+            let vals_ref = jvm.allocate(vals)?;
+            if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                if let Some(elements) = &mut keys_arr.array_elements {
+                    if !elements.is_empty() { elements[0] = key; }
+                }
+            }
+            if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                if let Some(elements) = &mut vals_arr.array_elements {
+                    if !elements.is_empty() { elements[0] = value; }
+                }
+            }
+            if let Some(map_obj) = jvm.heap.get_mut(map_ref) {
+                map_obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                map_obj.fields.insert("values".to_string(), Value::ArrayRef(vals_ref));
+                map_obj.fields.insert("size".to_string(), Value::Int(1));
+            }
+            frame.push(Value::ObjectRef(map_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "singletonMap".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/Map;".to_string(), true, Some(native_impl))
+    }
 }
 
 /// Helper: get a sort-friendly hash from a Value
@@ -1594,9 +1675,53 @@ impl Objects {
 
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.Objects", Objects::equals());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::deepEquals());
         jvm.method_area.add_native_method("java.util.Objects", Objects::hashCode());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::hash());
         jvm.method_area.add_native_method("java.util.Objects", Objects::toString());
         jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNull());
+    }
+}
+
+impl Objects {
+    pub fn deepEquals() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let b = frame.pop()?;
+            let a = frame.pop()?;
+            let result = match (&a, &b) {
+                (Value::Null, Value::Null) => true,
+                (Value::Null, _) | (_, Value::Null) => false,
+                (Value::ArrayRef(a_id), Value::ArrayRef(b_id)) => {
+                    if a_id == b_id { true }
+                    else {
+                        let arr_a = jvm.heap.get(*a_id);
+                        let arr_b = jvm.heap.get(*b_id);
+                        match (arr_a, arr_b) {
+                            (Some(aa), Some(bb)) => aa.array_elements == bb.array_elements,
+                            _ => false,
+                        }
+                    }
+                }
+                _ => a == b,
+            };
+            frame.push(Value::Boolean(result))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "deepEquals".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn hash() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let values = frame.pop()?; // Object[]
+            let mut hash = 0;
+            if let Value::ArrayRef(arr_id) = values {
+                // Simplified: use length as hash
+                hash = arr_id as i32;
+            }
+            frame.push(Value::Int(hash))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "hash".to_string(), "([Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
     }
 }
 

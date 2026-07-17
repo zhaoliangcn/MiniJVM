@@ -7767,6 +7767,37 @@ impl TimeUnit {
     }
 }
 
+// ========== java.util.concurrent.SynchronousQueue ==========
+
+pub struct SynchronousQueue;
+
+impl SynchronousQueue {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.SynchronousQueue".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn put() -> Method {
+        // Simplified: accept the element (no actual blocking)
+        Method::new_native("java.util.concurrent.SynchronousQueue".to_string(), "put".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+
+    pub fn take() -> Method {
+        // Simplified: return null (no actual blocking)
+        Method::new_native("java.util.concurrent.SynchronousQueue".to_string(), "take".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn poll() -> Method {
+        Method::new_native("java.util.concurrent.SynchronousQueue".to_string(), "poll".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.SynchronousQueue", SynchronousQueue::init());
+        jvm.method_area.add_native_method("java.util.concurrent.SynchronousQueue", SynchronousQueue::put());
+        jvm.method_area.add_native_method("java.util.concurrent.SynchronousQueue", SynchronousQueue::take());
+        jvm.method_area.add_native_method("java.util.concurrent.SynchronousQueue", SynchronousQueue::poll());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7783,6 +7814,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     LinkedBlockingQueue::register(jvm);
     ArrayBlockingQueue::register(jvm);
     TimeUnit::register(jvm);
+    SynchronousQueue::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

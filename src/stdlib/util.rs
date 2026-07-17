@@ -6267,6 +6267,164 @@ impl OptionalDouble {
     }
 }
 
+// ========== java.util.StringJoiner ==========
+
+pub struct StringJoiner;
+
+impl StringJoiner {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let delim_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("delimiter".to_string(), delim_ref);
+                    obj.fields.insert("prefix".to_string(), Value::Null);
+                    obj.fields.insert("suffix".to_string(), Value::Null);
+                    obj.fields.insert("value".to_string(), Value::Null);
+                    obj.fields.insert("empty".to_string(), Value::Boolean(true));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.StringJoiner".to_string(), "<init>".to_string(), "(Ljava/lang/CharSequence;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_with_prefix() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let suffix_ref = frame.get_local(3)?.clone();
+            let prefix_ref = frame.get_local(2)?.clone();
+            let delim_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("delimiter".to_string(), delim_ref);
+                    obj.fields.insert("prefix".to_string(), prefix_ref);
+                    obj.fields.insert("suffix".to_string(), suffix_ref);
+                    obj.fields.insert("value".to_string(), Value::Null);
+                    obj.fields.insert("empty".to_string(), Value::Boolean(true));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.StringJoiner".to_string(), "<init>".to_string(), "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;Ljava/lang/CharSequence;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem_ref = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let empty = obj.fields.get("empty")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(true);
+                    let current = obj.fields.get("value").cloned();
+                    if empty {
+                        if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                            obj.fields.insert("value".to_string(), elem_ref);
+                            obj.fields.insert("empty".to_string(), Value::Boolean(false));
+                        }
+                    } else {
+                        // Concatenate: current + delimiter + element
+                        let current_str = if let Some(Value::ObjectRef(s_id)) = &current {
+                            if let Some(s_obj) = jvm.heap.get(*s_id) {
+                                s_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let delim_str = if let Some(Value::ObjectRef(d_id)) = obj.fields.get("delimiter") {
+                            if let Some(d_obj) = jvm.heap.get(*d_id) {
+                                d_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let elem_str = if let Value::ObjectRef(e_id) = &elem_ref {
+                            if let Some(e_obj) = jvm.heap.get(*e_id) {
+                                e_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let result = current_str + &delim_str + &elem_str;
+                        let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                        let result_ref = jvm.allocate(result_obj)?;
+                        if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                            obj.fields.insert("value".to_string(), Value::ObjectRef(result_ref));
+                        }
+                    }
+                }
+            }
+            frame.push(Value::ObjectRef(this_ref.as_ref()))?;
+            Ok(())
+        });
+        Method::new_native("java.util.StringJoiner".to_string(), "add".to_string(), "(Ljava/lang/CharSequence;)Ljava/util/StringJoiner;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let empty = obj.fields.get("empty")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(true);
+                    if empty {
+                        // Return prefix + suffix
+                        let prefix = obj.fields.get("prefix").cloned();
+                        let suffix = obj.fields.get("suffix").cloned();
+                        let prefix_str = if let Some(Value::ObjectRef(p_id)) = &prefix {
+                            if let Some(p_obj) = jvm.heap.get(*p_id) {
+                                p_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let suffix_str = if let Some(Value::ObjectRef(s_id)) = &suffix {
+                            if let Some(s_obj) = jvm.heap.get(*s_id) {
+                                s_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let result = prefix_str + &suffix_str;
+                        let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                        let result_ref = jvm.allocate(result_obj)?;
+                        frame.push(Value::ObjectRef(result_ref))?;
+                    } else {
+                        // Return prefix + value + suffix
+                        let prefix = obj.fields.get("prefix").cloned();
+                        let value = obj.fields.get("value").cloned();
+                        let suffix = obj.fields.get("suffix").cloned();
+                        let prefix_str = if let Some(Value::ObjectRef(p_id)) = &prefix {
+                            if let Some(p_obj) = jvm.heap.get(*p_id) {
+                                p_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let value_str = if let Some(Value::ObjectRef(v_id)) = &value {
+                            if let Some(v_obj) = jvm.heap.get(*v_id) {
+                                v_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let suffix_str = if let Some(Value::ObjectRef(s_id)) = &suffix {
+                            if let Some(s_obj) = jvm.heap.get(*s_id) {
+                                s_obj.string_value.clone().unwrap_or_default()
+                            } else { String::new() }
+                        } else { String::new() };
+                        let result = prefix_str + &value_str + &suffix_str;
+                        let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                        let result_ref = jvm.allocate(result_obj)?;
+                        frame.push(Value::ObjectRef(result_ref))?;
+                    }
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.StringJoiner".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.StringJoiner", StringJoiner::init());
+        jvm.method_area.add_native_method("java.util.StringJoiner", StringJoiner::init_with_prefix());
+        jvm.method_area.add_native_method("java.util.StringJoiner", StringJoiner::add());
+        jvm.method_area.add_native_method("java.util.StringJoiner", StringJoiner::toString());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -6281,6 +6439,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Random::register(jvm);
     UUID::register(jvm);
     BitSet::register(jvm);
+    StringJoiner::register(jvm);
     Consumer::register(jvm);
     Function::register(jvm);
     Supplier::register(jvm);

@@ -2616,6 +2616,8 @@ impl Objects {
         jvm.method_area.add_native_method("java.util.Objects", Objects::compare());
         jvm.method_area.add_native_method("java.util.Objects", Objects::isNull());
         jvm.method_area.add_native_method("java.util.Objects", Objects::nonNull());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::toString_default());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNullElse());
     }
 }
 
@@ -2689,6 +2691,45 @@ impl Objects {
             Ok(())
         });
         Method::new_native("java.util.Objects".to_string(), "nonNull".to_string(), "(Ljava/lang/Object;)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString_default() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let default_str = frame.pop()?;
+            let obj = frame.pop()?;
+            if obj.is_null() {
+                frame.push(default_str)?;
+            } else {
+                // Call toString on the object
+                if let Value::ObjectRef(id) = &obj {
+                    if let Some(o) = jvm.heap.get(*id) {
+                        if let Some(s) = &o.string_value {
+                            let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                            let r = jvm.allocate(result)?;
+                            frame.push(Value::ObjectRef(r))?;
+                            return Ok(());
+                        }
+                    }
+                }
+                frame.push(obj)?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "toString".to_string(), "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn requireNonNullElse() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let default_obj = frame.pop()?;
+            let obj = frame.pop()?;
+            if obj.is_null() {
+                frame.push(default_obj)?;
+            } else {
+                frame.push(obj)?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "requireNonNullElse".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
     }
 }
 

@@ -7798,6 +7798,165 @@ impl SynchronousQueue {
     }
 }
 
+// ========== java.util.Formatter ==========
+
+pub struct Formatter;
+
+impl Formatter {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let sb = HeapObject::new("java.lang.StringBuilder".to_string());
+                let sb_ref = jvm.allocate(sb)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("sb".to_string(), Value::ObjectRef(sb_ref));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Formatter".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn format() -> Method {
+        // Delegates to String.format
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let args_ref = frame.pop()?; // Object[]
+            let fmt_ref = frame.pop()?;  // String format
+            let this_ref = frame.get_local(0)?;
+
+            // Get the format string
+            let format_str = if let Value::ObjectRef(str_id) = fmt_ref {
+                if let Some(str_obj) = jvm.heap.get(str_id) {
+                    str_obj.string_value.clone().unwrap_or_default()
+                } else { String::new() }
+            } else { String::new() };
+
+            // Extract args from the array
+            let mut args: Vec<Value> = Vec::new();
+            if let Value::ArrayRef(arr_id) = args_ref {
+                if let Some(arr_obj) = jvm.heap.get(arr_id) {
+                    if let Some(elements) = &arr_obj.array_elements {
+                        args = elements.clone();
+                    }
+                }
+            }
+
+            // Simple format string parsing
+            let mut result = String::new();
+            let mut chars = format_str.chars().peekable();
+            let mut arg_idx = 0;
+
+            while let Some(ch) = chars.next() {
+                if ch == '%' {
+                    match chars.next() {
+                        Some('s') => {
+                            if arg_idx < args.len() {
+                                let s = value_to_string_util(jvm, &args[arg_idx]);
+                                result.push_str(&s);
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('d') => {
+                            if arg_idx < args.len() {
+                                match &args[arg_idx] {
+                                    Value::Int(v) => result.push_str(&v.to_string()),
+                                    Value::Long(v) => result.push_str(&v.to_string()),
+                                    _ => result.push_str("0"),
+                                }
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('f') => {
+                            if arg_idx < args.len() {
+                                match &args[arg_idx] {
+                                    Value::Float(v) => result.push_str(&format!("{:.6}", v)),
+                                    Value::Double(v) => result.push_str(&format!("{:.6}", v)),
+                                    Value::Int(v) => result.push_str(&format!("{}.0", v)),
+                                    _ => result.push_str("0.0"),
+                                }
+                                arg_idx += 1;
+                            }
+                        }
+                        Some('n') => result.push('\n'),
+                        Some('%') => result.push('%'),
+                        Some(c) => { result.push('%'); result.push(c); }
+                        None => result.push('%'),
+                    }
+                } else {
+                    result.push(ch);
+                }
+            }
+
+            // Store the result in the StringBuilder
+            if let Value::ObjectRef(this_id) = this_ref {
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                let str_ref = jvm.allocate(str_obj)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("result".to_string(), Value::ObjectRef(str_ref));
+                }
+            }
+            frame.push(Value::ObjectRef(this_ref.as_ref()))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Formatter".to_string(), "format".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(str_id)) = obj.fields.get("result") {
+                        if let Some(str_obj) = jvm.heap.get(*str_id) {
+                            if let Some(s) = &str_obj.string_value {
+                                let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                let r = jvm.allocate(result)?;
+                                frame.push(Value::ObjectRef(r))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Formatter".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Formatter", Formatter::init());
+        jvm.method_area.add_native_method("java.util.Formatter", Formatter::format());
+        jvm.method_area.add_native_method("java.util.Formatter", Formatter::toString());
+    }
+}
+
+/// Helper: convert a Value to its string representation for formatting
+fn value_to_string_util(jvm: &JVM, val: &Value) -> String {
+    match val {
+        Value::Null => "null".to_string(),
+        Value::ObjectRef(id) => {
+            if let Some(obj) = jvm.heap.get(*id) {
+                if let Some(s) = &obj.string_value {
+                    s.clone()
+                } else {
+                    format!("{}@{}", obj.class_name, id)
+                }
+            } else { "null".to_string() }
+        }
+        Value::ArrayRef(id) => format!("Array@{}", id),
+        Value::Int(v) => v.to_string(),
+        Value::Long(v) => v.to_string(),
+        Value::Float(v) => v.to_string(),
+        Value::Double(v) => v.to_string(),
+        Value::Boolean(v) => v.to_string(),
+        Value::Byte(v) => v.to_string(),
+        Value::Short(v) => v.to_string(),
+        Value::Char(v) => v.to_string(),
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7815,6 +7974,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ArrayBlockingQueue::register(jvm);
     TimeUnit::register(jvm);
     SynchronousQueue::register(jvm);
+    Formatter::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

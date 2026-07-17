@@ -5115,6 +5115,166 @@ impl AtomicReferenceArray {
     }
 }
 
+// ========== java.util.concurrent.atomic.LongAdder ==========
+
+pub struct LongAdder;
+
+impl LongAdder {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Long(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAdder".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let x = frame.pop()?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("value".to_string(), Value::Long(old + x));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAdder".to_string(), "add".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn increment() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("value".to_string(), Value::Long(old + 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAdder".to_string(), "increment".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn decrement() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("value".to_string(), Value::Long(old - 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAdder".to_string(), "decrement".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn sum() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAdder".to_string(), "sum".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn longValue() -> Method {
+        LongAdder::sum()
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::add());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::increment());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::decrement());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::sum());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAdder", LongAdder::longValue());
+    }
+}
+
+// ========== java.util.concurrent.atomic.DoubleAdder ==========
+
+pub struct DoubleAdder;
+
+impl DoubleAdder {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Double(0.0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAdder".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let x = frame.pop()?.as_double();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Double(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0.0);
+                    obj.fields.insert("value".to_string(), Value::Double(old + x));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAdder".to_string(), "add".to_string(), "(D)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn sum() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Double(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0.0)
+                } else { 0.0 }
+            } else { 0.0 };
+            frame.push(Value::Double(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAdder".to_string(), "sum".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn doubleValue() -> Method {
+        DoubleAdder::sum()
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAdder", DoubleAdder::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAdder", DoubleAdder::add());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAdder", DoubleAdder::sum());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAdder", DoubleAdder::doubleValue());
+    }
+}
+
 // ========== java.util.LinkedHashMap ==========
 
 pub struct LinkedHashMap;
@@ -6515,6 +6675,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicIntegerArray::register(jvm);
     AtomicLongArray::register(jvm);
     AtomicReferenceArray::register(jvm);
+    LongAdder::register(jvm);
+    DoubleAdder::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

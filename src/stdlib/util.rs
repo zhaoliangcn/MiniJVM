@@ -7716,6 +7716,57 @@ impl ArrayBlockingQueue {
     }
 }
 
+// ========== java.util.concurrent.TimeUnit ==========
+
+pub struct TimeUnit;
+
+impl TimeUnit {
+    pub fn toMillis() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let duration = frame.pop()?.as_long();
+            let this_ref = frame.get_local(0)?;
+            // Simplified: treat all TimeUnits as milliseconds
+            frame.push(Value::Long(duration))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.TimeUnit".to_string(), "toMillis".to_string(), "(J)J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toSeconds() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let duration = frame.pop()?.as_long();
+            frame.push(Value::Long(duration / 1000))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.TimeUnit".to_string(), "toSeconds".to_string(), "(J)J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toNanos() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let duration = frame.pop()?.as_long();
+            frame.push(Value::Long(duration * 1_000_000))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.TimeUnit".to_string(), "toNanos".to_string(), "(J)J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn sleep() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let timeout = frame.pop()?.as_long();
+            // Simplified: no actual sleep
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.TimeUnit".to_string(), "sleep".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.TimeUnit", TimeUnit::toMillis());
+        jvm.method_area.add_native_method("java.util.concurrent.TimeUnit", TimeUnit::toSeconds());
+        jvm.method_area.add_native_method("java.util.concurrent.TimeUnit", TimeUnit::toNanos());
+        jvm.method_area.add_native_method("java.util.concurrent.TimeUnit", TimeUnit::sleep());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7731,6 +7782,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Exchanger::register(jvm);
     LinkedBlockingQueue::register(jvm);
     ArrayBlockingQueue::register(jvm);
+    TimeUnit::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

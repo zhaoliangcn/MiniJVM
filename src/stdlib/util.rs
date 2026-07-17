@@ -5499,6 +5499,49 @@ impl BitSet {
     }
 }
 
+// ========== java.util.function interfaces ==========
+
+pub struct Consumer;
+pub struct Function;
+pub struct Supplier;
+pub struct Predicate;
+
+impl Consumer {
+    pub fn accept() -> Method {
+        Method::new_native("java.util.function.Consumer".to_string(), "accept".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.Consumer", Consumer::accept());
+    }
+}
+
+impl Function {
+    pub fn apply() -> Method {
+        Method::new_native("java.util.function.Function".to_string(), "apply".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.Function", Function::apply());
+    }
+}
+
+impl Supplier {
+    pub fn get() -> Method {
+        Method::new_native("java.util.function.Supplier".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.Supplier", Supplier::get());
+    }
+}
+
+impl Predicate {
+    pub fn test() -> Method {
+        Method::new_native("java.util.function.Predicate".to_string(), "test".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.Predicate", Predicate::test());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -5513,6 +5556,10 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Random::register(jvm);
     UUID::register(jvm);
     BitSet::register(jvm);
+    Consumer::register(jvm);
+    Function::register(jvm);
+    Supplier::register(jvm);
+    Predicate::register(jvm);
     Base64::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);

@@ -1641,6 +1641,11 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedCollection());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSortedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedNavigableSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSortedMap());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedNavigableMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::newSetFromMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::reverseOrder());
         jvm.method_area.add_native_method("java.util.Collections", Collections::list());
@@ -2210,6 +2215,51 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "synchronizedSet".to_string(), "(Ljava/util/Set;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedCollection() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let coll_ref = frame.pop()?;
+            frame.push(coll_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedCollection".to_string(), "(Ljava/util/Collection;)Ljava/util/Collection;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedSortedSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedSortedSet".to_string(), "(Ljava/util/SortedSet;)Ljava/util/SortedSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedNavigableSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedNavigableSet".to_string(), "(Ljava/util/NavigableSet;)Ljava/util/NavigableSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedSortedMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let map_ref = frame.pop()?;
+            frame.push(map_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedSortedMap".to_string(), "(Ljava/util/SortedMap;)Ljava/util/SortedMap;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn synchronizedNavigableMap() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let map_ref = frame.pop()?;
+            frame.push(map_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "synchronizedNavigableMap".to_string(), "(Ljava/util/NavigableMap;)Ljava/util/NavigableMap;".to_string(), true, Some(native_impl))
     }
 
     pub fn newSetFromMap() -> Method {

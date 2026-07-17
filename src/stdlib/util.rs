@@ -6303,6 +6303,150 @@ impl Deque {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentLinkedQueue ==========
+
+pub struct ConcurrentLinkedQueue;
+
+impl ConcurrentLinkedQueue {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentLinkedQueue".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (current_size, arr_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (size, a_ref)
+                };
+                let new_size = current_size + 1;
+                if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                    if let Some(elements) = &mut arr.array_elements {
+                        if current_size >= elements.len() {
+                            let mut new_elems = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                            for (i, e) in elements.iter().enumerate() { new_elems[i] = e.clone(); }
+                            *elements = new_elems;
+                        }
+                        if current_size < elements.len() { elements[current_size] = elem; }
+                    }
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(new_size as i32));
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentLinkedQueue".to_string(), "add".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn poll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if !elements.is_empty() { elements[0].clone() } else { Value::Null }
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..current_size - 1 { elements[i] = elements[i + 1].clone(); }
+                            if current_size > 0 { elements[current_size - 1] = Value::Null; }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentLinkedQueue".to_string(), "poll".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn peek() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let arr_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            if !elements.is_empty() { frame.push(elements[0].clone())?; return Ok(()); }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentLinkedQueue".to_string(), "peek".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentLinkedQueue".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentLinkedQueue", ConcurrentLinkedQueue::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentLinkedQueue", ConcurrentLinkedQueue::add());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentLinkedQueue", ConcurrentLinkedQueue::poll());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentLinkedQueue", ConcurrentLinkedQueue::peek());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentLinkedQueue", ConcurrentLinkedQueue::size());
+    }
+}
+
 // ========== java.util.Locale ==========
 
 pub struct Locale;
@@ -7036,6 +7180,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Stack::register(jvm);
     HashMap::register(jvm);
     ConcurrentHashMap::register(jvm);
+    ConcurrentLinkedQueue::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

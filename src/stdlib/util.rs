@@ -7593,6 +7593,129 @@ impl LinkedBlockingQueue {
     }
 }
 
+// ========== java.util.concurrent.ArrayBlockingQueue ==========
+
+pub struct ArrayBlockingQueue;
+
+impl ArrayBlockingQueue {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let capacity = frame.get_local(1)?.as_int().max(0) as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), capacity);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("elementData".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                    obj.fields.insert("capacity".to_string(), Value::Int(capacity as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ArrayBlockingQueue".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn put() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut current_size, arr_ref, capacity) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let cap = obj.fields.get("capacity")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c as usize) } else { None })
+                        .unwrap_or(0);
+                    (size, a_ref, cap)
+                };
+                if current_size < capacity {
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            if current_size < elements.len() { elements[current_size] = elem; }
+                        }
+                    }
+                    current_size += 1;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(current_size as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ArrayBlockingQueue".to_string(), "put".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn take() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (arr_ref, current_size) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let a_ref = obj.fields.get("elementData")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (a_ref, size)
+                };
+                if current_size > 0 {
+                    let result = if let Some(arr) = jvm.heap.get(arr_ref) {
+                        if let Some(elements) = &arr.array_elements {
+                            elements[0].clone()
+                        } else { Value::Null }
+                    } else { Value::Null };
+                    if let Some(arr) = jvm.heap.get_mut(arr_ref) {
+                        if let Some(elements) = &mut arr.array_elements {
+                            for i in 0..current_size - 1 { elements[i] = elements[i + 1].clone(); }
+                            if current_size > 0 { elements[current_size - 1] = Value::Null; }
+                        }
+                    }
+                    if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                        obj.fields.insert("size".to_string(), Value::Int((current_size - 1) as i32));
+                    }
+                    frame.push(result)?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ArrayBlockingQueue".to_string(), "take".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ArrayBlockingQueue".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ArrayBlockingQueue", ArrayBlockingQueue::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ArrayBlockingQueue", ArrayBlockingQueue::put());
+        jvm.method_area.add_native_method("java.util.concurrent.ArrayBlockingQueue", ArrayBlockingQueue::take());
+        jvm.method_area.add_native_method("java.util.concurrent.ArrayBlockingQueue", ArrayBlockingQueue::size());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7607,6 +7730,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     CyclicBarrier::register(jvm);
     Exchanger::register(jvm);
     LinkedBlockingQueue::register(jvm);
+    ArrayBlockingQueue::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

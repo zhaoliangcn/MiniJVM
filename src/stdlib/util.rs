@@ -7342,6 +7342,78 @@ impl Executors {
     }
 }
 
+// ========== java.util.concurrent.CyclicBarrier ==========
+
+pub struct CyclicBarrier;
+
+impl CyclicBarrier {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let parties = frame.get_local(1)?.as_int().max(0);
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("parties".to_string(), Value::Int(parties));
+                    obj.fields.insert("count".to_string(), Value::Int(parties));
+                    obj.fields.insert("generation".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CyclicBarrier".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn r#await() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let count = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0);
+                    let parties = obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    if count > 1 {
+                        obj.fields.insert("count".to_string(), Value::Int(count - 1));
+                    } else {
+                        // Reset for next generation
+                        obj.fields.insert("count".to_string(), Value::Int(parties));
+                        let gen = obj.fields.get("generation")
+                            .and_then(|v| if let Value::Int(g) = v { Some(*g) } else { None })
+                            .unwrap_or(0);
+                        obj.fields.insert("generation".to_string(), Value::Int(gen + 1));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CyclicBarrier".to_string(), "await".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getParties() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let parties = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(parties))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CyclicBarrier".to_string(), "getParties".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CyclicBarrier", CyclicBarrier::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CyclicBarrier", CyclicBarrier::r#await());
+        jvm.method_area.add_native_method("java.util.concurrent.CyclicBarrier", CyclicBarrier::getParties());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7353,6 +7425,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Semaphore::register(jvm);
     CountDownLatch::register(jvm);
     Executors::register(jvm);
+    CyclicBarrier::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

@@ -8079,6 +8079,105 @@ impl CompletableFuture {
     }
 }
 
+// ========== java.util.concurrent.FutureTask ==========
+
+pub struct FutureTask;
+
+impl FutureTask {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _callable = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("result".to_string(), Value::Null);
+                    obj.fields.insert("done".to_string(), Value::Boolean(false));
+                    obj.fields.insert("cancelled".to_string(), Value::Boolean(false));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "<init>".to_string(), "(Ljava/util/concurrent/Callable;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("result") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isDone() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let done = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("done")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(done))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "isDone".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn cancel() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("cancelled".to_string(), Value::Boolean(true));
+                    obj.fields.insert("done".to_string(), Value::Boolean(true));
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "cancel".to_string(), "(Z)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isCancelled() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let cancelled = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("cancelled")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(cancelled))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "isCancelled".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn run() -> Method {
+        Method::new_native("java.util.concurrent.FutureTask".to_string(), "run".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::init());
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::get());
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::isDone());
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::cancel());
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::isCancelled());
+        jvm.method_area.add_native_method("java.util.concurrent.FutureTask", FutureTask::run());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -8098,6 +8197,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     SynchronousQueue::register(jvm);
     Formatter::register(jvm);
     CompletableFuture::register(jvm);
+    FutureTask::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

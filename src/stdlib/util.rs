@@ -1634,6 +1634,10 @@ impl Collections {
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::checkedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedCollection());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedQueue());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedSortedSet());
+        jvm.method_area.add_native_method("java.util.Collections", Collections::checkedNavigableSet());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedList());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedMap());
         jvm.method_area.add_native_method("java.util.Collections", Collections::synchronizedSet());
@@ -2098,6 +2102,46 @@ impl Collections {
             Ok(())
         });
         Method::new_native("java.util.Collections".to_string(), "checkedSet".to_string(), "(Ljava/util/Set;Ljava/lang/Class;)Ljava/util/Set;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedCollection() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?;
+            let coll_ref = frame.pop()?;
+            frame.push(coll_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedCollection".to_string(), "(Ljava/util/Collection;Ljava/lang/Class;)Ljava/util/Collection;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedQueue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?;
+            let queue_ref = frame.pop()?;
+            frame.push(queue_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedQueue".to_string(), "(Ljava/util/Queue;Ljava/lang/Class;)Ljava/util/Queue;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedSortedSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?;
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedSortedSet".to_string(), "(Ljava/util/SortedSet;Ljava/lang/Class;)Ljava/util/SortedSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn checkedNavigableSet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _type_ref = frame.pop()?;
+            let set_ref = frame.pop()?;
+            frame.push(set_ref)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Collections".to_string(), "checkedNavigableSet".to_string(), "(Ljava/util/NavigableSet;Ljava/lang/Class;)Ljava/util/NavigableSet;".to_string(), true, Some(native_impl))
     }
 
     pub fn synchronizedList() -> Method {

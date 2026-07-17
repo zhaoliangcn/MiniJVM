@@ -4992,6 +4992,79 @@ impl AtomicLongArray {
     }
 }
 
+// ========== java.util.concurrent.atomic.AtomicReferenceArray ==========
+
+pub struct AtomicReferenceArray;
+
+impl AtomicReferenceArray {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let length = frame.get_local(1)?.as_int().max(0) as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), length);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("array".to_string(), Value::ArrayRef(arr_ref));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceArray".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let i = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ArrayRef(arr_id)) = obj.fields.get("array") {
+                        if let Some(arr) = jvm.heap.get(*arr_id) {
+                            if let Some(elements) = &arr.array_elements {
+                                if i < elements.len() {
+                                    frame.push(elements[i].clone())?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceArray".to_string(), "get".to_string(), "(I)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let new_val = frame.pop()?;
+            let i = frame.pop()?.as_int() as usize;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ArrayRef(arr_id)) = obj.fields.get("array") {
+                        if let Some(arr) = jvm.heap.get_mut(*arr_id) {
+                            if let Some(elements) = &mut arr.array_elements {
+                                if i < elements.len() { elements[i] = new_val; }
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceArray".to_string(), "set".to_string(), "(ILjava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceArray", AtomicReferenceArray::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceArray", AtomicReferenceArray::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceArray", AtomicReferenceArray::set());
+    }
+}
+
 // ========== java.util.LinkedHashMap ==========
 
 pub struct LinkedHashMap;
@@ -6232,6 +6305,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicBoolean::register(jvm);
     AtomicIntegerArray::register(jvm);
     AtomicLongArray::register(jvm);
+    AtomicReferenceArray::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

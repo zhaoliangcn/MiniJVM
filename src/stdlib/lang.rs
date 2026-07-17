@@ -1683,6 +1683,53 @@ impl Long {
         jvm.method_area.add_native_method("java.lang.Long", Long::MAX_VALUE());
         jvm.method_area.add_native_method("java.lang.Long", Long::MIN_VALUE());
         jvm.method_area.add_native_method("java.lang.Long", Long::SIZE());
+        jvm.method_area.add_native_method("java.lang.Long", Long::toHexString());
+        jvm.method_area.add_native_method("java.lang.Long", Long::toBinaryString());
+        jvm.method_area.add_native_method("java.lang.Long", Long::toOctalString());
+    }
+}
+
+impl Long {
+    pub fn toHexString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Long(i) = val {
+                let s = format!("{:x}", i);
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "toHexString".to_string(), "(J)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toBinaryString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Long(i) = val {
+                let s = format!("{:b}", i);
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "toBinaryString".to_string(), "(J)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toOctalString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.get_local(0)?;
+            if let Value::Long(i) = val {
+                let s = format!("{:o}", i);
+                let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+                let str_ref = jvm.allocate(str_obj)?;
+                frame.push(Value::ObjectRef(str_ref))?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.Long".to_string(), "toOctalString".to_string(), "(J)Ljava/lang/String;".to_string(), true, Some(native_impl))
     }
 }
 

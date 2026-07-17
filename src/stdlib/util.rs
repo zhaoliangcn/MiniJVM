@@ -8178,6 +8178,163 @@ impl FutureTask {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentSkipListMap ==========
+
+pub struct ConcurrentSkipListMap;
+
+impl ConcurrentSkipListMap {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let keys_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let vals_arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let keys_ref = jvm.allocate(keys_arr)?;
+                let vals_ref = jvm.allocate(vals_arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("keys".to_string(), Value::ArrayRef(keys_ref));
+                    obj.fields.insert("values".to_string(), Value::ArrayRef(vals_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentSkipListMap".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn put() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut size, keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, k_ref, v_ref)
+                };
+                let mut found = false;
+                let mut found_idx = 0;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        for (i, k) in keys.iter().enumerate() {
+                            if i >= size { break; }
+                            if values_equal(&*jvm, k, &key) { found = true; found_idx = i; break; }
+                        }
+                    }
+                }
+                if found {
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if found_idx < vals.len() { vals[found_idx] = value; }
+                        }
+                    }
+                } else {
+                    let new_size = size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() { new_keys[i] = k.clone(); }
+                                *keys = new_keys;
+                            }
+                            if size < keys.len() { keys[size] = key; }
+                        }
+                    }
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if size >= vals.len() {
+                                let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, v) in vals.iter().enumerate() { new_vals[i] = v.clone(); }
+                                *vals = new_vals;
+                            }
+                            if size < vals.len() { vals[size] = value; }
+                        }
+                    }
+                    size = new_size;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentSkipListMap".to_string(), "put".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size {
+                                if i < keys.len() && values_equal(&*jvm, &keys[i], &key) {
+                                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                                        if let Some(vals) = &vals_arr.array_elements {
+                                            if i < vals.len() {
+                                                frame.push(vals[i].clone())?;
+                                                return Ok(());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentSkipListMap".to_string(), "get".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ConcurrentSkipListMap".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentSkipListMap", ConcurrentSkipListMap::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentSkipListMap", ConcurrentSkipListMap::put());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentSkipListMap", ConcurrentSkipListMap::get());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentSkipListMap", ConcurrentSkipListMap::size());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -8198,6 +8355,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Formatter::register(jvm);
     CompletableFuture::register(jvm);
     FutureTask::register(jvm);
+    ConcurrentSkipListMap::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

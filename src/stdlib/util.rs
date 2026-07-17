@@ -6192,9 +6192,14 @@ impl BitSet {
 // ========== java.util.function interfaces ==========
 
 pub struct Consumer;
+pub struct BiConsumer;
 pub struct Function;
+pub struct BiFunction;
+pub struct UnaryOperator;
+pub struct BinaryOperator;
 pub struct Supplier;
 pub struct Predicate;
+pub struct BiPredicate;
 
 impl Consumer {
     pub fn accept() -> Method {
@@ -6205,12 +6210,48 @@ impl Consumer {
     }
 }
 
+impl BiConsumer {
+    pub fn accept() -> Method {
+        Method::new_native("java.util.function.BiConsumer".to_string(), "accept".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.BiConsumer", BiConsumer::accept());
+    }
+}
+
 impl Function {
     pub fn apply() -> Method {
         Method::new_native("java.util.function.Function".to_string(), "apply".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
     }
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.function.Function", Function::apply());
+    }
+}
+
+impl BiFunction {
+    pub fn apply() -> Method {
+        Method::new_native("java.util.function.BiFunction".to_string(), "apply".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.BiFunction", BiFunction::apply());
+    }
+}
+
+impl UnaryOperator {
+    pub fn apply() -> Method {
+        Method::new_native("java.util.function.UnaryOperator".to_string(), "apply".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.UnaryOperator", UnaryOperator::apply());
+    }
+}
+
+impl BinaryOperator {
+    pub fn apply() -> Method {
+        Method::new_native("java.util.function.BinaryOperator".to_string(), "apply".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.BinaryOperator", BinaryOperator::apply());
     }
 }
 
@@ -6229,6 +6270,15 @@ impl Predicate {
     }
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.function.Predicate", Predicate::test());
+    }
+}
+
+impl BiPredicate {
+    pub fn test() -> Method {
+        Method::new_native("java.util.function.BiPredicate".to_string(), "test".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.function.BiPredicate", BiPredicate::test());
     }
 }
 
@@ -6651,9 +6701,14 @@ pub fn register_util_classes(jvm: &mut JVM) {
     BitSet::register(jvm);
     StringJoiner::register(jvm);
     Consumer::register(jvm);
+    BiConsumer::register(jvm);
     Function::register(jvm);
+    BiFunction::register(jvm);
+    UnaryOperator::register(jvm);
+    BinaryOperator::register(jvm);
     Supplier::register(jvm);
     Predicate::register(jvm);
+    BiPredicate::register(jvm);
     Base64::register(jvm);
     Arrays::register(jvm);
     Collections::register(jvm);

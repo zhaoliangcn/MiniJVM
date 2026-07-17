@@ -488,6 +488,20 @@ impl String {
         Method::new_native("java.lang.String".to_string(), "split".to_string(), "(Ljava/lang/String;)[Ljava/lang/String;".to_string(), false, None)
     }
 
+    pub fn intern() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Return the same string object (simplified intern)
+                frame.push(Value::ObjectRef(*this_id))?;
+                return Ok(());
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.String".to_string(), "intern".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.lang.String", String::length());
         jvm.method_area.add_native_method("java.lang.String", String::charAt());
@@ -515,6 +529,7 @@ impl String {
         jvm.method_area.add_native_method("java.lang.String", String::isEmpty());
         jvm.method_area.add_native_method("java.lang.String", String::join());
         jvm.method_area.add_native_method("java.lang.String", String::repeat());
+        jvm.method_area.add_native_method("java.lang.String", String::intern());
         jvm.method_area.add_native_method("java.lang.String", String::split());
     }
 }

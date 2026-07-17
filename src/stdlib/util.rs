@@ -2712,6 +2712,7 @@ impl Objects {
         jvm.method_area.add_native_method("java.util.Objects", Objects::nonNull());
         jvm.method_area.add_native_method("java.util.Objects", Objects::toString_default());
         jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNullElse());
+        jvm.method_area.add_native_method("java.util.Objects", Objects::requireNonNullElseGet());
     }
 }
 
@@ -2824,6 +2825,35 @@ impl Objects {
             Ok(())
         });
         Method::new_native("java.util.Objects".to_string(), "requireNonNullElse".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn requireNonNullElseGet() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let supplier_ref = frame.pop()?;
+            let obj = frame.pop()?;
+            if obj.is_null() {
+                // Call supplier.get() to get the default value
+                if let Value::ObjectRef(supplier_id) = &supplier_ref {
+                    if let Some(supplier_obj) = jvm.heap.get(*supplier_id) {
+                        if let Some(Value::ObjectRef(s_id)) = supplier_obj.fields.get("value") {
+                            if let Some(s_obj) = jvm.heap.get(*s_id) {
+                                if let Some(s) = &s_obj.string_value {
+                                    let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                    let r = jvm.allocate(result)?;
+                                    frame.push(Value::ObjectRef(r))?;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+                }
+                frame.push(Value::Null)?;
+            } else {
+                frame.push(obj)?;
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Objects".to_string(), "requireNonNullElseGet".to_string(), "(Ljava/lang/Object;Ljava/util/function/Supplier;)Ljava/lang/Object;".to_string(), true, Some(native_impl))
     }
 }
 

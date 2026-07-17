@@ -4159,6 +4159,14 @@ impl Comparator {
         });
         Method::new_native("java.util.Comparator".to_string(), "nullsLast".to_string(), "()Ljava/util/Comparator;".to_string(), true, Some(native_impl))
     }
+
+    pub fn reversed() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Comparator".to_string(), "reversed".to_string(), "()Ljava/util/Comparator;".to_string(), false, Some(native_impl))
+    }
 }
 
 // ========== java.util.concurrent.atomic.AtomicInteger ==========

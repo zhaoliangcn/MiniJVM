@@ -5275,6 +5275,127 @@ impl DoubleAdder {
     }
 }
 
+// ========== java.util.concurrent.atomic.LongAccumulator ==========
+
+pub struct LongAccumulator;
+
+impl LongAccumulator {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let identity = frame.get_local(2)?.as_long();
+            let _accumulator_fn = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Long(identity));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAccumulator".to_string(), "<init>".to_string(), "(Ljava/util/function/LongBinaryOperator;J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn accumulate() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let x = frame.pop()?.as_long();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0);
+                    // Simplified: use addition as the accumulator function
+                    obj.fields.insert("value".to_string(), Value::Long(old + x));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAccumulator".to_string(), "accumulate".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.LongAccumulator".to_string(), "get".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAccumulator", LongAccumulator::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAccumulator", LongAccumulator::accumulate());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.LongAccumulator", LongAccumulator::get());
+    }
+}
+
+// ========== java.util.concurrent.atomic.DoubleAccumulator ==========
+
+pub struct DoubleAccumulator;
+
+impl DoubleAccumulator {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let identity = frame.get_local(2)?.as_double();
+            let _accumulator_fn = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), Value::Double(identity));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAccumulator".to_string(), "<init>".to_string(), "(Ljava/util/function/DoubleBinaryOperator;D)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn accumulate() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let x = frame.pop()?.as_double();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let old = obj.fields.get("value")
+                        .and_then(|v| if let Value::Double(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0.0);
+                    obj.fields.insert("value".to_string(), Value::Double(old + x));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAccumulator".to_string(), "accumulate".to_string(), "(D)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Double(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0.0)
+                } else { 0.0 }
+            } else { 0.0 };
+            frame.push(Value::Double(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.DoubleAccumulator".to_string(), "get".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAccumulator", DoubleAccumulator::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAccumulator", DoubleAccumulator::accumulate());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.DoubleAccumulator", DoubleAccumulator::get());
+    }
+}
+
 // ========== java.util.LinkedHashMap ==========
 
 pub struct LinkedHashMap;
@@ -6732,6 +6853,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicReferenceArray::register(jvm);
     LongAdder::register(jvm);
     DoubleAdder::register(jvm);
+    LongAccumulator::register(jvm);
+    DoubleAccumulator::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

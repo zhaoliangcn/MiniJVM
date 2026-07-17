@@ -7957,6 +7957,128 @@ fn value_to_string_util(jvm: &JVM, val: &Value) -> String {
     }
 }
 
+// ========== java.util.concurrent.CompletableFuture ==========
+
+pub struct CompletableFuture;
+
+impl CompletableFuture {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn complete() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("value".to_string(), value);
+                    obj.fields.insert("completed".to_string(), Value::Boolean(true));
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "complete".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("value") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn completedFuture() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let cf = HeapObject::new("java.util.concurrent.CompletableFuture".to_string());
+            let cf_ref = jvm.allocate(cf)?;
+            if let Some(obj) = jvm.heap.get_mut(cf_ref) {
+                obj.fields.insert("value".to_string(), value);
+                obj.fields.insert("completed".to_string(), Value::Boolean(true));
+            }
+            frame.push(Value::ObjectRef(cf_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "completedFuture".to_string(), "(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn supplyAsync() -> Method {
+        // Simplified: returns an incomplete CompletableFuture
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _supplier = frame.pop()?;
+            let cf = HeapObject::new("java.util.concurrent.CompletableFuture".to_string());
+            let cf_ref = jvm.allocate(cf)?;
+            if let Some(obj) = jvm.heap.get_mut(cf_ref) {
+                obj.fields.insert("value".to_string(), Value::Null);
+                obj.fields.insert("completed".to_string(), Value::Boolean(false));
+            }
+            frame.push(Value::ObjectRef(cf_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "supplyAsync".to_string(), "(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn thenApply() -> Method {
+        // Simplified: returns the same CompletableFuture
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _fn = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "thenApply".to_string(), "(Ljava/util/function/Function;)Ljava/util/concurrent/CompletableFuture;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn thenAccept() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _consumer = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            frame.push(this_ref.clone())?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "thenAccept".to_string(), "(Ljava/util/function/Consumer;)Ljava/util/concurrent/CompletableFuture;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isDone() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let done = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("completed")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(done))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CompletableFuture".to_string(), "isDone".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::complete());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::get());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::completedFuture());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::supplyAsync());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::thenApply());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::thenAccept());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletableFuture", CompletableFuture::isDone());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7975,6 +8097,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     TimeUnit::register(jvm);
     SynchronousQueue::register(jvm);
     Formatter::register(jvm);
+    CompletableFuture::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

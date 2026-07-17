@@ -5542,6 +5542,251 @@ impl Predicate {
     }
 }
 
+// ========== java.util.OptionalInt ==========
+
+pub struct OptionalInt;
+
+impl OptionalInt {
+    pub fn empty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let opt = HeapObject::new("java.util.OptionalInt".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Int(0));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(false));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalInt".to_string(), "empty".to_string(), "()Ljava/util/OptionalInt;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn of() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_int();
+            let opt = HeapObject::new("java.util.OptionalInt".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Int(val));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(true));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalInt".to_string(), "of".to_string(), "(I)Ljava/util/OptionalInt;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isPresent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let present = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("isPresent")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(present))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalInt".to_string(), "isPresent".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getAsInt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalInt".to_string(), "getAsInt".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn orElse() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let other = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let present = obj.fields.get("isPresent")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false);
+                    if present {
+                        obj.fields.get("value")
+                            .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                            .unwrap_or(other)
+                    } else { other }
+                } else { other }
+            } else { other };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalInt".to_string(), "orElse".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.OptionalInt", OptionalInt::empty());
+        jvm.method_area.add_native_method("java.util.OptionalInt", OptionalInt::of());
+        jvm.method_area.add_native_method("java.util.OptionalInt", OptionalInt::isPresent());
+        jvm.method_area.add_native_method("java.util.OptionalInt", OptionalInt::getAsInt());
+        jvm.method_area.add_native_method("java.util.OptionalInt", OptionalInt::orElse());
+    }
+}
+
+// ========== java.util.OptionalLong ==========
+
+pub struct OptionalLong;
+
+impl OptionalLong {
+    pub fn empty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let opt = HeapObject::new("java.util.OptionalLong".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Long(0));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(false));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalLong".to_string(), "empty".to_string(), "()Ljava/util/OptionalLong;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn of() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_long();
+            let opt = HeapObject::new("java.util.OptionalLong".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Long(val));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(true));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalLong".to_string(), "of".to_string(), "(J)Ljava/util/OptionalLong;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isPresent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let present = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("isPresent")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(present))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalLong".to_string(), "isPresent".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getAsLong() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Long(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalLong".to_string(), "getAsLong".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.OptionalLong", OptionalLong::empty());
+        jvm.method_area.add_native_method("java.util.OptionalLong", OptionalLong::of());
+        jvm.method_area.add_native_method("java.util.OptionalLong", OptionalLong::isPresent());
+        jvm.method_area.add_native_method("java.util.OptionalLong", OptionalLong::getAsLong());
+    }
+}
+
+// ========== java.util.OptionalDouble ==========
+
+pub struct OptionalDouble;
+
+impl OptionalDouble {
+    pub fn empty() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let opt = HeapObject::new("java.util.OptionalDouble".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Double(0.0));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(false));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalDouble".to_string(), "empty".to_string(), "()Ljava/util/OptionalDouble;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn of() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_double();
+            let opt = HeapObject::new("java.util.OptionalDouble".to_string());
+            let opt_ref = jvm.allocate(opt)?;
+            if let Some(obj) = jvm.heap.get_mut(opt_ref) {
+                obj.fields.insert("value".to_string(), Value::Double(val));
+                obj.fields.insert("isPresent".to_string(), Value::Boolean(true));
+            }
+            frame.push(Value::ObjectRef(opt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalDouble".to_string(), "of".to_string(), "(D)Ljava/util/OptionalDouble;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isPresent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let present = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("isPresent")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(present))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalDouble".to_string(), "isPresent".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getAsDouble() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("value")
+                        .and_then(|v| if let Value::Double(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0.0)
+                } else { 0.0 }
+            } else { 0.0 };
+            frame.push(Value::Double(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.OptionalDouble".to_string(), "getAsDouble".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.OptionalDouble", OptionalDouble::empty());
+        jvm.method_area.add_native_method("java.util.OptionalDouble", OptionalDouble::of());
+        jvm.method_area.add_native_method("java.util.OptionalDouble", OptionalDouble::isPresent());
+        jvm.method_area.add_native_method("java.util.OptionalDouble", OptionalDouble::getAsDouble());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -5571,6 +5816,9 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Iterable::register(jvm);
     Objects::register(jvm);
     Optional::register(jvm);
+    OptionalInt::register(jvm);
+    OptionalLong::register(jvm);
+    OptionalDouble::register(jvm);
     AtomicInteger::register(jvm);
     AtomicLong::register(jvm);
     AtomicReference::register(jvm);

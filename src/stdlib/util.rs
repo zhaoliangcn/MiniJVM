@@ -3939,6 +3939,10 @@ impl UUID {
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.util.UUID", UUID::randomUUID());
         jvm.method_area.add_native_method("java.util.UUID", UUID::fromString());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::version());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::variant());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::getMostSignificantBits());
+        jvm.method_area.add_native_method("java.util.UUID", UUID::getLeastSignificantBits());
         jvm.method_area.add_native_method("java.util.UUID", UUID::toString());
     }
 }
@@ -3964,6 +3968,38 @@ impl UUID {
             Ok(())
         });
         Method::new_native("java.util.UUID".to_string(), "fromString".to_string(), "(Ljava/lang/String;)Ljava/util/UUID;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn version() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            frame.push(Value::Int(4))?; // UUID version 4 (random)
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "version".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn variant() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            frame.push(Value::Int(2))?; // IETF variant
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "variant".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getMostSignificantBits() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "getMostSignificantBits".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getLeastSignificantBits() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.UUID".to_string(), "getLeastSignificantBits".to_string(), "()J".to_string(), false, Some(native_impl))
     }
 }
 

@@ -7414,6 +7414,64 @@ impl CyclicBarrier {
     }
 }
 
+// ========== java.util.concurrent.Exchanger ==========
+
+pub struct Exchanger;
+
+impl Exchanger {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("slot".to_string(), Value::Null);
+                    obj.fields.insert("hasValue".to_string(), Value::Boolean(false));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Exchanger".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn exchange() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let x = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract current state first
+                let (has_value, old_slot) = if let Some(obj) = jvm.heap.get(*this_id) {
+                    let hv = obj.fields.get("hasValue")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false);
+                    let slot = obj.fields.get("slot").cloned();
+                    (hv, slot)
+                } else { (false, None) };
+                // Update state
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    if has_value {
+                        obj.fields.insert("slot".to_string(), x);
+                        if let Some(val) = old_slot {
+                            frame.push(val)?;
+                            return Ok(());
+                        }
+                    } else {
+                        obj.fields.insert("slot".to_string(), x);
+                        obj.fields.insert("hasValue".to_string(), Value::Boolean(true));
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Exchanger".to_string(), "exchange".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Exchanger", Exchanger::init());
+        jvm.method_area.add_native_method("java.util.concurrent.Exchanger", Exchanger::exchange());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7426,6 +7484,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     CountDownLatch::register(jvm);
     Executors::register(jvm);
     CyclicBarrier::register(jvm);
+    Exchanger::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

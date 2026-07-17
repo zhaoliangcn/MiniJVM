@@ -7316,6 +7316,32 @@ impl StringJoiner {
     }
 }
 
+// ========== java.util.concurrent.ExecutorService & Executors ==========
+
+pub struct ExecutorService;
+pub struct Executors;
+
+impl Executors {
+    pub fn newSingleThreadExecutor() -> Method {
+        // Simplified: returns null (no actual thread pool)
+        Method::new_native("java.util.concurrent.Executors".to_string(), "newSingleThreadExecutor".to_string(), "()Ljava/util/concurrent/ExecutorService;".to_string(), true, None)
+    }
+
+    pub fn newFixedThreadPool() -> Method {
+        Method::new_native("java.util.concurrent.Executors".to_string(), "newFixedThreadPool".to_string(), "(I)Ljava/util/concurrent/ExecutorService;".to_string(), true, None)
+    }
+
+    pub fn newCachedThreadPool() -> Method {
+        Method::new_native("java.util.concurrent.Executors".to_string(), "newCachedThreadPool".to_string(), "()Ljava/util/concurrent/ExecutorService;".to_string(), true, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Executors", Executors::newSingleThreadExecutor());
+        jvm.method_area.add_native_method("java.util.concurrent.Executors", Executors::newFixedThreadPool());
+        jvm.method_area.add_native_method("java.util.concurrent.Executors", Executors::newCachedThreadPool());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -7326,6 +7352,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ConcurrentLinkedQueue::register(jvm);
     Semaphore::register(jvm);
     CountDownLatch::register(jvm);
+    Executors::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

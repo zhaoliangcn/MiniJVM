@@ -6447,6 +6447,149 @@ impl ConcurrentLinkedQueue {
     }
 }
 
+// ========== java.util.concurrent.Semaphore ==========
+
+pub struct Semaphore;
+
+impl Semaphore {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let permits = frame.get_local(1)?.as_int().max(0);
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("permits".to_string(), Value::Int(permits));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Semaphore".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn acquire() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let permits = obj.fields.get("permits")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    if permits > 0 {
+                        obj.fields.insert("permits".to_string(), Value::Int(permits - 1));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Semaphore".to_string(), "acquire".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn release() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let permits = obj.fields.get("permits")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("permits".to_string(), Value::Int(permits + 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Semaphore".to_string(), "release".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn availablePermits() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let permits = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("permits")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(permits))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Semaphore".to_string(), "availablePermits".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Semaphore", Semaphore::init());
+        jvm.method_area.add_native_method("java.util.concurrent.Semaphore", Semaphore::acquire());
+        jvm.method_area.add_native_method("java.util.concurrent.Semaphore", Semaphore::release());
+        jvm.method_area.add_native_method("java.util.concurrent.Semaphore", Semaphore::availablePermits());
+    }
+}
+
+// ========== java.util.concurrent.CountDownLatch ==========
+
+pub struct CountDownLatch;
+
+impl CountDownLatch {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let count = frame.get_local(1)?.as_int().max(0);
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("count".to_string(), Value::Int(count));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CountDownLatch".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn countDown() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let count = obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0);
+                    if count > 0 {
+                        obj.fields.insert("count".to_string(), Value::Int(count - 1));
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CountDownLatch".to_string(), "countDown".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getCount() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let count = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("count")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(count))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CountDownLatch".to_string(), "getCount".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn r#await() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
+        Method::new_native("java.util.concurrent.CountDownLatch".to_string(), "await".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CountDownLatch", CountDownLatch::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CountDownLatch", CountDownLatch::countDown());
+        jvm.method_area.add_native_method("java.util.concurrent.CountDownLatch", CountDownLatch::getCount());
+        jvm.method_area.add_native_method("java.util.concurrent.CountDownLatch", CountDownLatch::r#await());
+    }
+}
+
 // ========== java.util.Locale ==========
 
 pub struct Locale;
@@ -7181,6 +7324,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     HashMap::register(jvm);
     ConcurrentHashMap::register(jvm);
     ConcurrentLinkedQueue::register(jvm);
+    Semaphore::register(jvm);
+    CountDownLatch::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

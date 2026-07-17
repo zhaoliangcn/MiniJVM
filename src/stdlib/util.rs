@@ -747,6 +747,9 @@ impl HashMap {
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::computeIfAbsent());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::merge());
         jvm.method_area.add_native_method("java.util.HashMap", HashMap::forEach());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::getOrDefault());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::putIfAbsent());
+        jvm.method_area.add_native_method("java.util.HashMap", HashMap::replace());
     }
 }
 
@@ -880,6 +883,173 @@ impl HashMap {
         // Simplified: no-op for HashMap forEach (requires BiConsumer)
         let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
         Method::new_native("java.util.HashMap".to_string(), "forEach".to_string(), "(Ljava/util/function/BiConsumer;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getOrDefault() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let default_val = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let vals_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size {
+                                if i < keys.len() && values_equal(&*jvm, &keys[i], &key) {
+                                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                                        if let Some(vals) = &vals_arr.array_elements {
+                                            if i < vals.len() {
+                                                frame.push(vals[i].clone())?;
+                                                return Ok(());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(default_val)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "getOrDefault".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn putIfAbsent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut size, keys_ref, vals_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, k_ref, v_ref)
+                };
+                // Check if key exists
+                let mut found = false;
+                let mut found_idx = 0;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        for (i, k) in keys.iter().enumerate() {
+                            if i >= size { break; }
+                            if values_equal(&*jvm, k, &key) { found = true; found_idx = i; break; }
+                        }
+                    }
+                }
+                if found {
+                    // Key exists, return existing value
+                    if let Some(vals_arr) = jvm.heap.get(vals_ref) {
+                        if let Some(vals) = &vals_arr.array_elements {
+                            if found_idx < vals.len() {
+                                frame.push(vals[found_idx].clone())?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                } else {
+                    // Key not found, insert
+                    let new_size = size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() { new_keys[i] = k.clone(); }
+                                *keys = new_keys;
+                            }
+                            if size < keys.len() { keys[size] = key; }
+                        }
+                    }
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if size >= vals.len() {
+                                let mut new_vals = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, v) in vals.iter().enumerate() { new_vals[i] = v.clone(); }
+                                *vals = new_vals;
+                            }
+                            if size < vals.len() { vals[size] = value; }
+                        }
+                    }
+                    size = new_size;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "putIfAbsent".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn replace() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let new_value = frame.pop()?;
+            let key = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract all data first, then update
+                let (keys_ref, vals_ref, size) = if let Some(obj) = jvm.heap.get(*this_id) {
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let v_ref = obj.fields.get("values")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    (k_ref, v_ref, sz)
+                } else { (0, 0, 0) };
+                // Find matching index
+                let mut found_idx = None;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        for i in 0..size {
+                            if i < keys.len() && values_equal(&*jvm, &keys[i], &key) {
+                                found_idx = Some(i);
+                                break;
+                            }
+                        }
+                    }
+                }
+                // Update the value if found
+                if let Some(idx) = found_idx {
+                    if let Some(vals_arr) = jvm.heap.get_mut(vals_ref) {
+                        if let Some(vals) = &mut vals_arr.array_elements {
+                            if idx < vals.len() {
+                                let old = vals[idx].clone();
+                                vals[idx] = new_value;
+                                frame.push(old)?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.HashMap".to_string(), "replace".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
     }
 }
 

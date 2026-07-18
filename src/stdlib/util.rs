@@ -8802,6 +8802,125 @@ impl CopyOnWriteArrayList {
     }
 }
 
+// ========== java.util.concurrent.CopyOnWriteArraySet ==========
+
+pub struct CopyOnWriteArraySet;
+
+impl CopyOnWriteArraySet {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), 0);
+                let arr_ref = jvm.allocate(arr)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("keys".to_string(), Value::ArrayRef(arr_ref));
+                    obj.fields.insert("size".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CopyOnWriteArraySet".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let (mut size, keys_ref) = {
+                    let obj = jvm.heap.get(*this_id)
+                        .ok_or(RuntimeError::NullPointerException)?;
+                    let sz = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    let k_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    (sz, k_ref)
+                };
+                let mut found = false;
+                if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                    if let Some(keys) = &keys_arr.array_elements {
+                        found = keys.iter().any(|k| values_equal(&*jvm, k, &elem));
+                    }
+                }
+                if !found {
+                    let new_size = size + 1;
+                    if let Some(keys_arr) = jvm.heap.get_mut(keys_ref) {
+                        if let Some(keys) = &mut keys_arr.array_elements {
+                            if size >= keys.len() {
+                                let mut new_keys = vec![Value::Null; (new_size * 3 / 2 + 1).max(10)];
+                                for (i, k) in keys.iter().enumerate() { new_keys[i] = k.clone(); }
+                                *keys = new_keys;
+                            }
+                            if size < keys.len() { keys[size] = elem; }
+                        }
+                    }
+                    size = new_size;
+                }
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("size".to_string(), Value::Int(size as i32));
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CopyOnWriteArraySet".to_string(), "add".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn contains() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let mut found = false;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let keys_ref = obj.fields.get("keys")
+                        .and_then(|v| if let Value::ArrayRef(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s as usize) } else { None })
+                        .unwrap_or(0);
+                    if let Some(keys_arr) = jvm.heap.get(keys_ref) {
+                        if let Some(keys) = &keys_arr.array_elements {
+                            for i in 0..size {
+                                if i < keys.len() && values_equal(&*jvm, &keys[i], &elem) { found = true; break; }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Boolean(found))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CopyOnWriteArraySet".to_string(), "contains".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.CopyOnWriteArraySet".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CopyOnWriteArraySet", CopyOnWriteArraySet::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CopyOnWriteArraySet", CopyOnWriteArraySet::add());
+        jvm.method_area.add_native_method("java.util.concurrent.CopyOnWriteArraySet", CopyOnWriteArraySet::contains());
+        jvm.method_area.add_native_method("java.util.concurrent.CopyOnWriteArraySet", CopyOnWriteArraySet::size());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -8827,6 +8946,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     PriorityBlockingQueue::register(jvm);
     DelayQueue::register(jvm);
     CopyOnWriteArrayList::register(jvm);
+    CopyOnWriteArraySet::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

@@ -9940,6 +9940,31 @@ impl LockSupport {
     }
 }
 
+// ========== java.util.concurrent.locks.Condition ==========
+
+pub struct Condition;
+
+impl Condition {
+    pub fn r#await() -> Method {
+        Method::new_native("java.util.concurrent.locks.Condition".to_string(), "await".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn signal() -> Method {
+        Method::new_native("java.util.concurrent.locks.Condition".to_string(), "signal".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn signalAll() -> Method {
+        Method::new_native("java.util.concurrent.locks.Condition".to_string(), "signalAll".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn awaitNanos() -> Method {
+        Method::new_native("java.util.concurrent.locks.Condition".to_string(), "awaitNanos".to_string(), "(J)J".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.locks.Condition", Condition::r#await());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.Condition", Condition::signal());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.Condition", Condition::signalAll());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.Condition", Condition::awaitNanos());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10030,6 +10055,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicStampedReference::register(jvm);
     ReentrantLock::register(jvm);
     LockSupport::register(jvm);
+    Condition::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

@@ -9916,6 +9916,30 @@ impl BrokenBarrierException {
     }
 }
 
+// ========== java.util.concurrent.locks.LockSupport ==========
+
+pub struct LockSupport;
+
+impl LockSupport {
+    pub fn park() -> Method {
+        Method::new_native("java.util.concurrent.locks.LockSupport".to_string(), "park".to_string(), "()V".to_string(), true, None)
+    }
+
+    pub fn unpark() -> Method {
+        Method::new_native("java.util.concurrent.locks.LockSupport".to_string(), "unpark".to_string(), "(Ljava/lang/Thread;)V".to_string(), true, None)
+    }
+
+    pub fn parkNanos() -> Method {
+        Method::new_native("java.util.concurrent.locks.LockSupport".to_string(), "parkNanos".to_string(), "(J)V".to_string(), true, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.locks.LockSupport", LockSupport::park());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.LockSupport", LockSupport::unpark());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.LockSupport", LockSupport::parkNanos());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10005,6 +10029,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicMarkableReference::register(jvm);
     AtomicStampedReference::register(jvm);
     ReentrantLock::register(jvm);
+    LockSupport::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

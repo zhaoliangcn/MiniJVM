@@ -9557,6 +9557,34 @@ impl AtomicReferenceFieldUpdater {
     }
 }
 
+// ========== java.util.concurrent.RecursiveTask ==========
+
+pub struct RecursiveTask;
+
+impl RecursiveTask {
+    pub fn compute() -> Method {
+        Method::new_native("java.util.concurrent.RecursiveTask".to_string(), "compute".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RecursiveTask", RecursiveTask::compute());
+    }
+}
+
+// ========== java.util.concurrent.RecursiveAction ==========
+
+pub struct RecursiveAction;
+
+impl RecursiveAction {
+    pub fn compute() -> Method {
+        Method::new_native("java.util.concurrent.RecursiveAction".to_string(), "compute".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RecursiveAction", RecursiveAction::compute());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9586,6 +9614,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ConcurrentLinkedDeque::register(jvm);
     LinkedTransferQueue::register(jvm);
     Phaser::register_class(jvm);
+    RecursiveTask::register(jvm);
+    RecursiveAction::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

@@ -9628,6 +9628,30 @@ impl ForkJoinPool {
     }
 }
 
+// ========== java.util.concurrent.ForkJoinWorkerThread ==========
+
+pub struct ForkJoinWorkerThread;
+
+impl ForkJoinWorkerThread {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _pool = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("pool".to_string(), Value::Null);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ForkJoinWorkerThread".to_string(), "<init>".to_string(), "(Ljava/util/concurrent/ForkJoinPool;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinWorkerThread", ForkJoinWorkerThread::init());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9660,6 +9684,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RecursiveTask::register(jvm);
     RecursiveAction::register(jvm);
     ForkJoinPool::register(jvm);
+    ForkJoinWorkerThread::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

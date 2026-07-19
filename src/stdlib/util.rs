@@ -9288,6 +9288,170 @@ impl LinkedTransferQueue {
     }
 }
 
+// ========== java.util.concurrent.Phaser ==========
+
+pub struct Phaser;
+
+impl Phaser {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("phase".to_string(), Value::Int(0));
+                    obj.fields.insert("parties".to_string(), Value::Int(0));
+                    obj.fields.insert("arrived".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn init_parties() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let parties = frame.get_local(1)?.as_int().max(0);
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("phase".to_string(), Value::Int(0));
+                    obj.fields.insert("parties".to_string(), Value::Int(parties));
+                    obj.fields.insert("arrived".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "<init>".to_string(), "(I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let parties = obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("parties".to_string(), Value::Int(parties + 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "register".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn arrive() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let arrived = obj.fields.get("arrived")
+                        .and_then(|v| if let Value::Int(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let parties = obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    let new_arrived = arrived + 1;
+                    if new_arrived >= parties {
+                        // Advance to next phase
+                        let phase = obj.fields.get("phase")
+                            .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                            .unwrap_or(0);
+                        obj.fields.insert("phase".to_string(), Value::Int(phase + 1));
+                        obj.fields.insert("arrived".to_string(), Value::Int(0));
+                        frame.push(Value::Int(phase + 1))?;
+                    } else {
+                        obj.fields.insert("arrived".to_string(), Value::Int(new_arrived));
+                        frame.push(Value::Int(obj.fields.get("phase")
+                            .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                            .unwrap_or(0)))?;
+                    }
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "arrive".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn arriveAndAwaitAdvance() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let arrived = obj.fields.get("arrived")
+                        .and_then(|v| if let Value::Int(a) = v { Some(*a) } else { None })
+                        .unwrap_or(0);
+                    let parties = obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0);
+                    let new_arrived = arrived + 1;
+                    if new_arrived >= parties {
+                        let phase = obj.fields.get("phase")
+                            .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                            .unwrap_or(0);
+                        obj.fields.insert("phase".to_string(), Value::Int(phase + 1));
+                        obj.fields.insert("arrived".to_string(), Value::Int(0));
+                        frame.push(Value::Int(phase + 1))?;
+                    } else {
+                        obj.fields.insert("arrived".to_string(), Value::Int(new_arrived));
+                        frame.push(Value::Int(obj.fields.get("phase")
+                            .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                            .unwrap_or(0)))?;
+                    }
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "arriveAndAwaitAdvance".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getPhase() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let phase = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("phase")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(phase))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "getPhase".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getRegisteredParties() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let parties = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("parties")
+                        .and_then(|v| if let Value::Int(p) = v { Some(*p) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(parties))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.Phaser".to_string(), "getRegisteredParties".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register_class(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::init());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::init_parties());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::register());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::arrive());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::arriveAndAwaitAdvance());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::getPhase());
+        jvm.method_area.add_native_method("java.util.concurrent.Phaser", Phaser::getRegisteredParties());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9316,6 +9480,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     CopyOnWriteArraySet::register(jvm);
     ConcurrentLinkedDeque::register(jvm);
     LinkedTransferQueue::register(jvm);
+    Phaser::register_class(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

@@ -9848,6 +9848,40 @@ impl AtomicStampedReference {
     }
 }
 
+// ========== java.util.concurrent.TimeoutException ==========
+
+pub struct TimeoutException;
+
+impl TimeoutException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.TimeoutException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn init_msg() -> Method {
+        Method::new_native("java.util.concurrent.TimeoutException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.TimeoutException", TimeoutException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.TimeoutException", TimeoutException::init_msg());
+    }
+}
+
+// ========== java.util.concurrent.CancellationException ==========
+
+pub struct CancellationException;
+
+impl CancellationException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.CancellationException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn init_msg() -> Method {
+        Method::new_native("java.util.concurrent.CancellationException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CancellationException", CancellationException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CancellationException", CancellationException::init_msg());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9884,6 +9918,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ExecutorCompletionService::register(jvm);
     Callable::register(jvm);
     ExecutionException::register(jvm);
+    TimeoutException::register(jvm);
+    CancellationException::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

@@ -9452,6 +9452,76 @@ impl Phaser {
     }
 }
 
+// ========== java.util.concurrent.atomic.AtomicIntegerFieldUpdater ==========
+
+pub struct AtomicIntegerFieldUpdater;
+
+impl AtomicIntegerFieldUpdater {
+    pub fn newUpdater() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _field_name = frame.pop()?;
+            let _clazz = frame.pop()?;
+            let updater = HeapObject::new("java.util.concurrent.atomic.AtomicIntegerFieldUpdater".to_string());
+            let updater_ref = jvm.allocate(updater)?;
+            if let Some(obj) = jvm.heap.get_mut(updater_ref) {
+                obj.fields.insert("fieldName".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(updater_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicIntegerFieldUpdater".to_string(), "newUpdater".to_string(), "(Ljava/lang/Class;Ljava/lang/String;)Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicIntegerFieldUpdater".to_string(), "get".to_string(), "(Ljava/lang/Object;)I".to_string(), false, None)
+    }
+
+    pub fn set() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicIntegerFieldUpdater".to_string(), "set".to_string(), "(Ljava/lang/Object;I)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicIntegerFieldUpdater", AtomicIntegerFieldUpdater::newUpdater());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicIntegerFieldUpdater", AtomicIntegerFieldUpdater::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicIntegerFieldUpdater", AtomicIntegerFieldUpdater::set());
+    }
+}
+
+// ========== java.util.concurrent.atomic.AtomicLongFieldUpdater ==========
+
+pub struct AtomicLongFieldUpdater;
+
+impl AtomicLongFieldUpdater {
+    pub fn newUpdater() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _field_name = frame.pop()?;
+            let _clazz = frame.pop()?;
+            let updater = HeapObject::new("java.util.concurrent.atomic.AtomicLongFieldUpdater".to_string());
+            let updater_ref = jvm.allocate(updater)?;
+            if let Some(obj) = jvm.heap.get_mut(updater_ref) {
+                obj.fields.insert("fieldName".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(updater_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicLongFieldUpdater".to_string(), "newUpdater".to_string(), "(Ljava/lang/Class;Ljava/lang/String;)Ljava/util/concurrent/atomic/AtomicLongFieldUpdater;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicLongFieldUpdater".to_string(), "get".to_string(), "(Ljava/lang/Object;)J".to_string(), false, None)
+    }
+
+    pub fn set() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicLongFieldUpdater".to_string(), "set".to_string(), "(Ljava/lang/Object;J)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLongFieldUpdater", AtomicLongFieldUpdater::newUpdater());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLongFieldUpdater", AtomicLongFieldUpdater::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicLongFieldUpdater", AtomicLongFieldUpdater::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9524,6 +9594,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     DoubleAdder::register(jvm);
     LongAccumulator::register(jvm);
     DoubleAccumulator::register(jvm);
+    AtomicIntegerFieldUpdater::register(jvm);
+    AtomicLongFieldUpdater::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

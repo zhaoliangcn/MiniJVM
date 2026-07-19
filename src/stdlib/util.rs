@@ -9882,6 +9882,40 @@ impl CancellationException {
     }
 }
 
+// ========== java.util.concurrent.RejectedExecutionException ==========
+
+pub struct RejectedExecutionException;
+
+impl RejectedExecutionException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.RejectedExecutionException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn init_msg() -> Method {
+        Method::new_native("java.util.concurrent.RejectedExecutionException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RejectedExecutionException", RejectedExecutionException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.RejectedExecutionException", RejectedExecutionException::init_msg());
+    }
+}
+
+// ========== java.util.concurrent.BrokenBarrierException ==========
+
+pub struct BrokenBarrierException;
+
+impl BrokenBarrierException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.BrokenBarrierException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn init_msg() -> Method {
+        Method::new_native("java.util.concurrent.BrokenBarrierException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.BrokenBarrierException", BrokenBarrierException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.BrokenBarrierException", BrokenBarrierException::init_msg());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9920,6 +9954,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ExecutionException::register(jvm);
     TimeoutException::register(jvm);
     CancellationException::register(jvm);
+    RejectedExecutionException::register(jvm);
+    BrokenBarrierException::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

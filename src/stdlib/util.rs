@@ -9965,6 +9965,63 @@ impl Condition {
     }
 }
 
+// ========== java.util.concurrent.locks.ReentrantReadWriteLock ==========
+
+pub struct ReentrantReadWriteLock;
+
+impl ReentrantReadWriteLock {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("readCount".to_string(), Value::Int(0));
+                    obj.fields.insert("writeCount".to_string(), Value::Int(0));
+                    obj.fields.insert("owner".to_string(), Value::Int(-1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantReadWriteLock".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn readLock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let rc = obj.fields.get("readCount")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("readCount".to_string(), Value::Int(rc + 1));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantReadWriteLock".to_string(), "readLock".to_string(), "()Ljava/util/concurrent/locks/Lock;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn writeLock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("writeCount".to_string(), Value::Int(1));
+                    obj.fields.insert("owner".to_string(), Value::Int(jvm.current_thread_id as i32));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.ReentrantReadWriteLock".to_string(), "writeLock".to_string(), "()Ljava/util/concurrent/locks/Lock;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantReadWriteLock", ReentrantReadWriteLock::init());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantReadWriteLock", ReentrantReadWriteLock::readLock());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.ReentrantReadWriteLock", ReentrantReadWriteLock::writeLock());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10056,6 +10113,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReentrantLock::register(jvm);
     LockSupport::register(jvm);
     Condition::register(jvm);
+    ReentrantReadWriteLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

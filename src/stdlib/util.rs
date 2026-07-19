@@ -9585,6 +9585,49 @@ impl RecursiveAction {
     }
 }
 
+// ========== java.util.concurrent.ForkJoinPool ==========
+
+pub struct ForkJoinPool;
+
+impl ForkJoinPool {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinPool".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn commonPool() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let pool = HeapObject::new("java.util.concurrent.ForkJoinPool".to_string());
+            let pool_ref = jvm.allocate(pool)?;
+            if let Some(obj) = jvm.heap.get_mut(pool_ref) {
+                obj.fields.insert("name".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(pool_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ForkJoinPool".to_string(), "commonPool".to_string(), "()Ljava/util/concurrent/ForkJoinPool;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn execute() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinPool".to_string(), "execute".to_string(), "(Ljava/lang/Runnable;)V".to_string(), false, None)
+    }
+
+    pub fn invoke() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinPool".to_string(), "invoke".to_string(), "(Ljava/util/concurrent/ForkJoinTask;)Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn submit() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinPool".to_string(), "submit".to_string(), "(Ljava/util/concurrent/ForkJoinTask;)Ljava/util/concurrent/ForkJoinTask;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinPool", ForkJoinPool::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinPool", ForkJoinPool::commonPool());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinPool", ForkJoinPool::execute());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinPool", ForkJoinPool::invoke());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinPool", ForkJoinPool::submit());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9616,6 +9659,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Phaser::register_class(jvm);
     RecursiveTask::register(jvm);
     RecursiveAction::register(jvm);
+    ForkJoinPool::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

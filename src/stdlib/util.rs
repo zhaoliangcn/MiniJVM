@@ -9726,6 +9726,128 @@ impl ExecutionException {
     }
 }
 
+// ========== java.util.concurrent.atomic.AtomicMarkableReference ==========
+
+pub struct AtomicMarkableReference;
+
+impl AtomicMarkableReference {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let mark = frame.get_local(2)?.as_bool();
+            let ref_val = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("reference".to_string(), ref_val);
+                    obj.fields.insert("mark".to_string(), Value::Boolean(mark));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicMarkableReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;Z)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("reference") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicMarkableReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isMarked() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mark = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("mark")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(mark))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicMarkableReference".to_string(), "isMarked".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicMarkableReference", AtomicMarkableReference::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicMarkableReference", AtomicMarkableReference::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicMarkableReference", AtomicMarkableReference::isMarked());
+    }
+}
+
+// ========== java.util.concurrent.atomic.AtomicStampedReference ==========
+
+pub struct AtomicStampedReference;
+
+impl AtomicStampedReference {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let stamp = frame.get_local(2)?.as_int();
+            let ref_val = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("reference".to_string(), ref_val);
+                    obj.fields.insert("stamp".to_string(), Value::Int(stamp));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicStampedReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;I)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("reference") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicStampedReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getStamp() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let stamp = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("stamp")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(stamp))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicStampedReference".to_string(), "getStamp".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicStampedReference", AtomicStampedReference::init());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicStampedReference", AtomicStampedReference::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicStampedReference", AtomicStampedReference::getStamp());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9808,6 +9930,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     AtomicIntegerFieldUpdater::register(jvm);
     AtomicLongFieldUpdater::register(jvm);
     AtomicReferenceFieldUpdater::register(jvm);
+    AtomicMarkableReference::register(jvm);
+    AtomicStampedReference::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

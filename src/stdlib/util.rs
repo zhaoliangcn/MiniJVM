@@ -9522,6 +9522,41 @@ impl AtomicLongFieldUpdater {
     }
 }
 
+// ========== java.util.concurrent.atomic.AtomicReferenceFieldUpdater ==========
+
+pub struct AtomicReferenceFieldUpdater;
+
+impl AtomicReferenceFieldUpdater {
+    pub fn newUpdater() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _field_name = frame.pop()?;
+            let _clazz = frame.pop()?;
+            let updater = HeapObject::new("java.util.concurrent.atomic.AtomicReferenceFieldUpdater".to_string());
+            let updater_ref = jvm.allocate(updater)?;
+            if let Some(obj) = jvm.heap.get_mut(updater_ref) {
+                obj.fields.insert("fieldName".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(updater_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceFieldUpdater".to_string(), "newUpdater".to_string(), "(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/String;)Ljava/util/concurrent/atomic/AtomicReferenceFieldUpdater;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceFieldUpdater".to_string(), "get".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn set() -> Method {
+        Method::new_native("java.util.concurrent.atomic.AtomicReferenceFieldUpdater".to_string(), "set".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceFieldUpdater", AtomicReferenceFieldUpdater::newUpdater());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceFieldUpdater", AtomicReferenceFieldUpdater::get());
+        jvm.method_area.add_native_method("java.util.concurrent.atomic.AtomicReferenceFieldUpdater", AtomicReferenceFieldUpdater::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9596,6 +9631,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     DoubleAccumulator::register(jvm);
     AtomicIntegerFieldUpdater::register(jvm);
     AtomicLongFieldUpdater::register(jvm);
+    AtomicReferenceFieldUpdater::register(jvm);
     ReentrantLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);

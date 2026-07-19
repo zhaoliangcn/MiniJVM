@@ -9693,6 +9693,39 @@ impl ExecutorCompletionService {
     }
 }
 
+// ========== java.util.concurrent.Callable ==========
+
+pub struct Callable;
+
+impl Callable {
+    pub fn call() -> Method {
+        Method::new_native("java.util.concurrent.Callable".to_string(), "call".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Callable", Callable::call());
+    }
+}
+
+// ========== java.util.concurrent.ExecutionException ==========
+
+pub struct ExecutionException;
+
+impl ExecutionException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.ExecutionException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn init_cause() -> Method {
+        Method::new_native("java.util.concurrent.ExecutionException".to_string(), "<init>".to_string(), "(Ljava/lang/String;Ljava/lang/Throwable;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutionException", ExecutionException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutionException", ExecutionException::init_cause());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9727,6 +9760,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ForkJoinPool::register(jvm);
     ForkJoinWorkerThread::register(jvm);
     ExecutorCompletionService::register(jvm);
+    Callable::register(jvm);
+    ExecutionException::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

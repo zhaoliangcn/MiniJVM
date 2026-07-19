@@ -9652,6 +9652,47 @@ impl ForkJoinWorkerThread {
     }
 }
 
+// ========== java.util.concurrent.ExecutorCompletionService ==========
+
+pub struct ExecutorCompletionService;
+
+impl ExecutorCompletionService {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _executor = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let queue = HeapObject::new("java.util.concurrent.LinkedBlockingQueue".to_string());
+                let queue_ref = jvm.allocate(queue)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("completionQueue".to_string(), Value::ObjectRef(queue_ref));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ExecutorCompletionService".to_string(), "<init>".to_string(), "(Ljava/util/concurrent/Executor;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn submit() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorCompletionService".to_string(), "submit".to_string(), "(Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Future;".to_string(), false, None)
+    }
+
+    pub fn take() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorCompletionService".to_string(), "take".to_string(), "()Ljava/util/concurrent/Future;".to_string(), false, None)
+    }
+
+    pub fn poll() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorCompletionService".to_string(), "poll".to_string(), "()Ljava/util/concurrent/Future;".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorCompletionService", ExecutorCompletionService::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorCompletionService", ExecutorCompletionService::submit());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorCompletionService", ExecutorCompletionService::take());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorCompletionService", ExecutorCompletionService::poll());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -9685,6 +9726,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RecursiveAction::register(jvm);
     ForkJoinPool::register(jvm);
     ForkJoinWorkerThread::register(jvm);
+    ExecutorCompletionService::register(jvm);
     LinkedHashMap::register(jvm);
     TreeMap::register(jvm);
     HashSet::register(jvm);

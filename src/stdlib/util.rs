@@ -10022,6 +10022,123 @@ impl ReentrantReadWriteLock {
     }
 }
 
+// ========== java.util.concurrent.locks.StampedLock ==========
+
+pub struct StampedLock;
+
+impl StampedLock {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("state".to_string(), Value::Long(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn writeLock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let state = obj.fields.get("state")
+                        .and_then(|v| if let Value::Long(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("state".to_string(), Value::Long(state + 1));
+                    frame.push(Value::Long(state + 1))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "writeLock".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn readLock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let state = obj.fields.get("state")
+                        .and_then(|v| if let Value::Long(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("state".to_string(), Value::Long(state + 1));
+                    frame.push(Value::Long(state + 1))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "readLock".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn tryOptimisticRead() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::Long(state)) = obj.fields.get("state") {
+                        frame.push(Value::Long(*state))?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Long(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "tryOptimisticRead".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn validate() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let stamp = frame.pop()?.as_long();
+            let this_ref = frame.get_local(0)?;
+            let valid = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::Long(state)) = obj.fields.get("state") {
+                        *state == stamp
+                    } else { false }
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(valid))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "validate".to_string(), "(J)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn unlock() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _stamp = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let state = obj.fields.get("state")
+                        .and_then(|v| if let Value::Long(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    if state > 0 { obj.fields.insert("state".to_string(), Value::Long(state - 1)); }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.locks.StampedLock".to_string(), "unlock".to_string(), "(J)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::init());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::writeLock());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::readLock());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::tryOptimisticRead());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::validate());
+        jvm.method_area.add_native_method("java.util.concurrent.locks.StampedLock", StampedLock::unlock());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10114,6 +10231,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     LockSupport::register(jvm);
     Condition::register(jvm);
     ReentrantReadWriteLock::register(jvm);
+    StampedLock::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

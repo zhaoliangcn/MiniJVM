@@ -10354,6 +10354,27 @@ impl ThreadPoolExecutor {
     }
 }
 
+// ========== java.util.concurrent.ScheduledThreadPoolExecutor ==========
+
+pub struct ScheduledThreadPoolExecutor;
+
+impl ScheduledThreadPoolExecutor {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledThreadPoolExecutor".to_string(), "<init>".to_string(), "(I)V".to_string(), false, None)
+    }
+    pub fn schedule() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledThreadPoolExecutor".to_string(), "schedule".to_string(), "(Ljava/lang/Runnable;JLjava/util/concurrent/TimeUnit;)Ljava/util/concurrent/ScheduledFuture;".to_string(), false, None)
+    }
+    pub fn scheduleAtFixedRate() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledThreadPoolExecutor".to_string(), "scheduleAtFixedRate".to_string(), "(Ljava/lang/Runnable;JJLjava/util/concurrent/TimeUnit;)Ljava/util/concurrent/ScheduledFuture;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledThreadPoolExecutor", ScheduledThreadPoolExecutor::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledThreadPoolExecutor", ScheduledThreadPoolExecutor::schedule());
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledThreadPoolExecutor", ScheduledThreadPoolExecutor::scheduleAtFixedRate());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10459,6 +10480,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RunnableScheduledFuture::register(jvm);
     RejectedExecutionHandler::register(jvm);
     ThreadPoolExecutor::register(jvm);
+    ScheduledThreadPoolExecutor::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

@@ -2738,6 +2738,23 @@ impl Comparable {
     }
 }
 
+// ========== java.lang.Appendable ==========
+
+pub struct Appendable;
+
+impl Appendable {
+    pub fn append_char() -> Method {
+        Method::new_native("java.lang.Appendable".to_string(), "append".to_string(), "(C)Ljava/lang/Appendable;".to_string(), false, None)
+    }
+    pub fn append_cs() -> Method {
+        Method::new_native("java.lang.Appendable".to_string(), "append".to_string(), "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Appendable", Appendable::append_char());
+        jvm.method_area.add_native_method("java.lang.Appendable", Appendable::append_cs());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2753,6 +2770,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     ProcessBuilder::register(jvm);
     Process::register(jvm);
     Comparable::register(jvm);
+    Appendable::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

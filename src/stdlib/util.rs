@@ -10375,6 +10375,31 @@ impl ScheduledThreadPoolExecutor {
     }
 }
 
+// ========== java.util.concurrent.BlockingQueue ==========
+
+pub struct BlockingQueue;
+
+impl BlockingQueue {
+    pub fn put() -> Method {
+        Method::new_native("java.util.concurrent.BlockingQueue".to_string(), "put".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn take() -> Method {
+        Method::new_native("java.util.concurrent.BlockingQueue".to_string(), "take".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn offer() -> Method {
+        Method::new_native("java.util.concurrent.BlockingQueue".to_string(), "offer".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn poll() -> Method {
+        Method::new_native("java.util.concurrent.BlockingQueue".to_string(), "poll".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingQueue", BlockingQueue::put());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingQueue", BlockingQueue::take());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingQueue", BlockingQueue::offer());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingQueue", BlockingQueue::poll());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10481,6 +10506,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RejectedExecutionHandler::register(jvm);
     ThreadPoolExecutor::register(jvm);
     ScheduledThreadPoolExecutor::register(jvm);
+    BlockingQueue::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

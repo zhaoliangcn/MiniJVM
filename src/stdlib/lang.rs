@@ -2582,6 +2582,71 @@ impl Reference {
     }
 }
 
+// ========== java.lang.Runtime ==========
+
+pub struct Runtime;
+
+impl Runtime {
+    pub fn getRuntime() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let rt = HeapObject::new("java.lang.Runtime".to_string());
+            let rt_ref = jvm.allocate(rt)?;
+            if let Some(obj) = jvm.heap.get_mut(rt_ref) {
+                obj.fields.insert("currentRuntime".to_string(), Value::Null);
+            }
+            frame.push(Value::ObjectRef(rt_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Runtime".to_string(), "getRuntime".to_string(), "()Ljava/lang/Runtime;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn availableProcessors() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(1))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Runtime".to_string(), "availableProcessors".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn freeMemory() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Long(1024 * 1024 * 100))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Runtime".to_string(), "freeMemory".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn totalMemory() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Long(1024 * 1024 * 256))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Runtime".to_string(), "totalMemory".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn maxMemory() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Long(1024 * 1024 * 1024))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Runtime".to_string(), "maxMemory".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn gc() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| Ok(()));
+        Method::new_native("java.lang.Runtime".to_string(), "gc".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::getRuntime());
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::availableProcessors());
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::freeMemory());
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::totalMemory());
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::maxMemory());
+        jvm.method_area.add_native_method("java.lang.Runtime", Runtime::gc());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2593,6 +2658,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     PhantomReference::register(jvm);
     ReferenceQueue::register(jvm);
     Reference::register(jvm);
+    Runtime::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

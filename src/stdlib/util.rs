@@ -10883,6 +10883,71 @@ impl EntrySetView {
     }
 }
 
+// ========== java.util.concurrent.Flow.Publisher ==========
+
+pub struct FlowPublisher;
+
+impl FlowPublisher {
+    pub fn subscribe() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Publisher".to_string(), "subscribe".to_string(), "(Ljava/util/concurrent/Flow$Subscriber;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Publisher", FlowPublisher::subscribe());
+    }
+}
+
+// ========== java.util.concurrent.Flow.Subscriber ==========
+
+pub struct FlowSubscriber;
+
+impl FlowSubscriber {
+    pub fn onSubscribe() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscriber".to_string(), "onSubscribe".to_string(), "(Ljava/util/concurrent/Flow$Subscription;)V".to_string(), false, None)
+    }
+    pub fn onNext() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscriber".to_string(), "onNext".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn onError() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscriber".to_string(), "onError".to_string(), "(Ljava/lang/Throwable;)V".to_string(), false, None)
+    }
+    pub fn onComplete() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscriber".to_string(), "onComplete".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscriber", FlowSubscriber::onSubscribe());
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscriber", FlowSubscriber::onNext());
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscriber", FlowSubscriber::onError());
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscriber", FlowSubscriber::onComplete());
+    }
+}
+
+// ========== java.util.concurrent.Flow.Subscription ==========
+
+pub struct FlowSubscription;
+
+impl FlowSubscription {
+    pub fn request() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscription".to_string(), "request".to_string(), "(J)V".to_string(), false, None)
+    }
+    pub fn cancel() -> Method {
+        Method::new_native("java.util.concurrent.Flow$Subscription".to_string(), "cancel".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscription", FlowSubscription::request());
+        jvm.method_area.add_native_method("java.util.concurrent.Flow$Subscription", FlowSubscription::cancel());
+    }
+}
+
+// ========== java.util.concurrent.Flow.Processor ==========
+
+pub struct FlowProcessor;
+
+impl FlowProcessor {
+    pub fn register(jvm: &mut JVM) {
+        // Processor extends Publisher and Subscriber, no additional methods
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11006,6 +11071,10 @@ pub fn register_util_classes(jvm: &mut JVM) {
     KeySetView::register(jvm);
     ValuesView::register(jvm);
     EntrySetView::register(jvm);
+    FlowPublisher::register(jvm);
+    FlowSubscriber::register(jvm);
+    FlowSubscription::register(jvm);
+    FlowProcessor::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

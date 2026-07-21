@@ -2541,6 +2541,47 @@ impl ReferenceQueue {
     }
 }
 
+// ========== java.lang.ref.Reference ==========
+
+pub struct Reference;
+
+impl Reference {
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("referent") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.Reference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn clear() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("referent".to_string(), Value::Null);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.Reference".to_string(), "clear".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ref.Reference", Reference::get());
+        jvm.method_area.add_native_method("java.lang.ref.Reference", Reference::clear());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2551,6 +2592,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     SoftReference::register(jvm);
     PhantomReference::register(jvm);
     ReferenceQueue::register(jvm);
+    Reference::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

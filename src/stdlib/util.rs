@@ -10704,6 +10704,27 @@ impl CountedCompleter {
     }
 }
 
+// ========== java.util.concurrent.ForkJoinTask ==========
+
+pub struct ForkJoinTask;
+
+impl ForkJoinTask {
+    pub fn fork() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinTask".to_string(), "fork".to_string(), "()Ljava/util/concurrent/ForkJoinTask;".to_string(), false, None)
+    }
+    pub fn join() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinTask".to_string(), "join".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn invoke() -> Method {
+        Method::new_native("java.util.concurrent.ForkJoinTask".to_string(), "invoke".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinTask", ForkJoinTask::fork());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinTask", ForkJoinTask::join());
+        jvm.method_area.add_native_method("java.util.concurrent.ForkJoinTask", ForkJoinTask::invoke());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10817,6 +10838,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ConcurrentMap::register(jvm);
     ConcurrentNavigableMap::register(jvm);
     CountedCompleter::register(jvm);
+    ForkJoinTask::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

@@ -10683,6 +10683,27 @@ impl ConcurrentNavigableMap {
     }
 }
 
+// ========== java.util.concurrent.CountedCompleter ==========
+
+pub struct CountedCompleter;
+
+impl CountedCompleter {
+    pub fn compute() -> Method {
+        Method::new_native("java.util.concurrent.CountedCompleter".to_string(), "compute".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn onCompletion() -> Method {
+        Method::new_native("java.util.concurrent.CountedCompleter".to_string(), "onCompletion".to_string(), "(Ljava/util/concurrent/CountedCompleter;)V".to_string(), false, None)
+    }
+    pub fn tryComplete() -> Method {
+        Method::new_native("java.util.concurrent.CountedCompleter".to_string(), "tryComplete".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CountedCompleter", CountedCompleter::compute());
+        jvm.method_area.add_native_method("java.util.concurrent.CountedCompleter", CountedCompleter::onCompletion());
+        jvm.method_area.add_native_method("java.util.concurrent.CountedCompleter", CountedCompleter::tryComplete());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10795,6 +10816,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     LinkedBlockingDeque::register(jvm);
     ConcurrentMap::register(jvm);
     ConcurrentNavigableMap::register(jvm);
+    CountedCompleter::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

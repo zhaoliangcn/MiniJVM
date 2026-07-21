@@ -10173,6 +10173,33 @@ impl ExecutorInterface {
     }
 }
 
+// ========== java.util.concurrent.ExecutorService ==========
+
+impl ExecutorService {
+    pub fn submit() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorService".to_string(), "submit".to_string(), "(Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Future;".to_string(), false, None)
+    }
+    pub fn submit_runnable() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorService".to_string(), "submit".to_string(), "(Ljava/lang/Runnable;)Ljava/util/concurrent/Future;".to_string(), false, None)
+    }
+    pub fn shutdown() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorService".to_string(), "shutdown".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn isShutdown() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorService".to_string(), "isShutdown".to_string(), "()Z".to_string(), false, None)
+    }
+    pub fn isTerminated() -> Method {
+        Method::new_native("java.util.concurrent.ExecutorService".to_string(), "isTerminated".to_string(), "()Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorService", ExecutorService::submit());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorService", ExecutorService::submit_runnable());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorService", ExecutorService::shutdown());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorService", ExecutorService::isShutdown());
+        jvm.method_area.add_native_method("java.util.concurrent.ExecutorService", ExecutorService::isTerminated());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10268,6 +10295,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     StampedLock::register(jvm);
     ScheduledExecutorService::register(jvm);
     ExecutorInterface::register(jvm);
+    ExecutorService::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

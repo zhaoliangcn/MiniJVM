@@ -10641,6 +10641,27 @@ impl LinkedBlockingDeque {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentMap ==========
+
+pub struct ConcurrentMap;
+
+impl ConcurrentMap {
+    pub fn putIfAbsent() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentMap".to_string(), "putIfAbsent".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn remove() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentMap".to_string(), "remove".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn replace() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentMap".to_string(), "replace".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentMap", ConcurrentMap::putIfAbsent());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentMap", ConcurrentMap::remove());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentMap", ConcurrentMap::replace());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10751,6 +10772,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     TransferQueue::register(jvm);
     BlockingDeque::register(jvm);
     LinkedBlockingDeque::register(jvm);
+    ConcurrentMap::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

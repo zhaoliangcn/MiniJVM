@@ -10248,6 +10248,19 @@ impl ScheduledFutureInterface {
     }
 }
 
+// ========== java.util.concurrent.ThreadFactory ==========
+
+pub struct ThreadFactory;
+
+impl ThreadFactory {
+    pub fn newThread() -> Method {
+        Method::new_native("java.util.concurrent.ThreadFactory".to_string(), "newThread".to_string(), "(Ljava/lang/Runnable;)Ljava/lang/Thread;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadFactory", ThreadFactory::newThread());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10347,6 +10360,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     FutureInterface::register(jvm);
     DelayedInterface::register(jvm);
     ScheduledFutureInterface::register(jvm);
+    ThreadFactory::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

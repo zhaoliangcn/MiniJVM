@@ -2725,6 +2725,19 @@ impl Process {
     }
 }
 
+// ========== java.lang.Comparable ==========
+
+pub struct Comparable;
+
+impl Comparable {
+    pub fn compareTo() -> Method {
+        Method::new_native("java.lang.Comparable".to_string(), "compareTo".to_string(), "(Ljava/lang/Object;)I".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Comparable", Comparable::compareTo());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2739,6 +2752,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Runtime::register(jvm);
     ProcessBuilder::register(jvm);
     Process::register(jvm);
+    Comparable::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

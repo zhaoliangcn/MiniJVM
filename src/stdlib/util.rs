@@ -10312,6 +10312,19 @@ impl RunnableScheduledFuture {
     }
 }
 
+// ========== java.util.concurrent.RejectedExecutionHandler ==========
+
+pub struct RejectedExecutionHandler;
+
+impl RejectedExecutionHandler {
+    pub fn rejectedExecution() -> Method {
+        Method::new_native("java.util.concurrent.RejectedExecutionHandler".to_string(), "rejectedExecution".to_string(), "(Ljava/lang/Runnable;Ljava/util/concurrent/ThreadPoolExecutor;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RejectedExecutionHandler", RejectedExecutionHandler::rejectedExecution());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10415,6 +10428,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     CompletionStage::register(jvm);
     RunnableFuture::register(jvm);
     RunnableScheduledFuture::register(jvm);
+    RejectedExecutionHandler::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

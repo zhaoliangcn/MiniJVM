@@ -10765,6 +10765,60 @@ impl DiscardOldestPolicy {
     }
 }
 
+// ========== java.util.concurrent.ThreadLocalRandom ==========
+
+pub struct ThreadLocalRandom;
+
+impl ThreadLocalRandom {
+    pub fn current() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let rng = HeapObject::new("java.util.concurrent.ThreadLocalRandom".to_string());
+            let rng_ref = jvm.allocate(rng)?;
+            if let Some(obj) = jvm.heap.get_mut(rng_ref) {
+                obj.fields.insert("seed".to_string(), Value::Long(0));
+            }
+            frame.push(Value::ObjectRef(rng_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ThreadLocalRandom".to_string(), "current".to_string(), "()Ljava/util/concurrent/ThreadLocalRandom;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn nextInt() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let bound = frame.pop()?.as_int();
+            let val = if bound > 0 { (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() as i32).abs() % bound } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ThreadLocalRandom".to_string(), "nextInt".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextLong() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() as i64;
+            frame.push(Value::Long(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ThreadLocalRandom".to_string(), "nextLong".to_string(), "()J".to_string(), false, Some(native_impl))
+    }
+
+    pub fn nextDouble() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let val = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() % 1000000) as f64 / 1000000.0;
+            frame.push(Value::Double(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.concurrent.ThreadLocalRandom".to_string(), "nextDouble".to_string(), "()D".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadLocalRandom", ThreadLocalRandom::current());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadLocalRandom", ThreadLocalRandom::nextInt());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadLocalRandom", ThreadLocalRandom::nextLong());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadLocalRandom", ThreadLocalRandom::nextDouble());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10883,6 +10937,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     CallerRunsPolicy::register(jvm);
     DiscardPolicy::register(jvm);
     DiscardOldestPolicy::register(jvm);
+    ThreadLocalRandom::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

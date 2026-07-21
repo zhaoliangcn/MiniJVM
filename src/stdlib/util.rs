@@ -10200,6 +10200,31 @@ impl ExecutorService {
     }
 }
 
+// ========== java.util.concurrent.Future ==========
+
+pub struct FutureInterface;
+
+impl FutureInterface {
+    pub fn get() -> Method {
+        Method::new_native("java.util.concurrent.Future".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn cancel() -> Method {
+        Method::new_native("java.util.concurrent.Future".to_string(), "cancel".to_string(), "(Z)Z".to_string(), false, None)
+    }
+    pub fn isDone() -> Method {
+        Method::new_native("java.util.concurrent.Future".to_string(), "isDone".to_string(), "()Z".to_string(), false, None)
+    }
+    pub fn isCancelled() -> Method {
+        Method::new_native("java.util.concurrent.Future".to_string(), "isCancelled".to_string(), "()Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Future", FutureInterface::get());
+        jvm.method_area.add_native_method("java.util.concurrent.Future", FutureInterface::cancel());
+        jvm.method_area.add_native_method("java.util.concurrent.Future", FutureInterface::isDone());
+        jvm.method_area.add_native_method("java.util.concurrent.Future", FutureInterface::isCancelled());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10296,6 +10321,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ScheduledExecutorService::register(jvm);
     ExecutorInterface::register(jvm);
     ExecutorService::register(jvm);
+    FutureInterface::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

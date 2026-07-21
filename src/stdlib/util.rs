@@ -10286,6 +10286,32 @@ impl CompletionStage {
     }
 }
 
+// ========== java.util.concurrent.RunnableFuture ==========
+
+pub struct RunnableFuture;
+
+impl RunnableFuture {
+    pub fn run() -> Method {
+        Method::new_native("java.util.concurrent.RunnableFuture".to_string(), "run".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RunnableFuture", RunnableFuture::run());
+    }
+}
+
+// ========== java.util.concurrent.RunnableScheduledFuture ==========
+
+pub struct RunnableScheduledFuture;
+
+impl RunnableScheduledFuture {
+    pub fn isPeriodic() -> Method {
+        Method::new_native("java.util.concurrent.RunnableScheduledFuture".to_string(), "isPeriodic".to_string(), "()Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.RunnableScheduledFuture", RunnableScheduledFuture::isPeriodic());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10387,6 +10413,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ScheduledFutureInterface::register(jvm);
     ThreadFactory::register(jvm);
     CompletionStage::register(jvm);
+    RunnableFuture::register(jvm);
+    RunnableScheduledFuture::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

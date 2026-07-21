@@ -10160,6 +10160,19 @@ impl ScheduledExecutorService {
     }
 }
 
+// ========== java.util.concurrent.Executor ==========
+
+pub struct ExecutorInterface;
+
+impl ExecutorInterface {
+    pub fn execute() -> Method {
+        Method::new_native("java.util.concurrent.Executor".to_string(), "execute".to_string(), "(Ljava/lang/Runnable;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Executor", ExecutorInterface::execute());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10254,6 +10267,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReentrantReadWriteLock::register(jvm);
     StampedLock::register(jvm);
     ScheduledExecutorService::register(jvm);
+    ExecutorInterface::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

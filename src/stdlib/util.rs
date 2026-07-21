@@ -10400,6 +10400,23 @@ impl BlockingQueue {
     }
 }
 
+// ========== java.util.concurrent.TransferQueue ==========
+
+pub struct TransferQueue;
+
+impl TransferQueue {
+    pub fn transfer() -> Method {
+        Method::new_native("java.util.concurrent.TransferQueue".to_string(), "transfer".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn tryTransfer() -> Method {
+        Method::new_native("java.util.concurrent.TransferQueue".to_string(), "tryTransfer".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.TransferQueue", TransferQueue::transfer());
+        jvm.method_area.add_native_method("java.util.concurrent.TransferQueue", TransferQueue::tryTransfer());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10507,6 +10524,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ThreadPoolExecutor::register(jvm);
     ScheduledThreadPoolExecutor::register(jvm);
     BlockingQueue::register(jvm);
+    TransferQueue::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

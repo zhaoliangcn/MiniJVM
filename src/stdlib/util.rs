@@ -10662,6 +10662,27 @@ impl ConcurrentMap {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentNavigableMap ==========
+
+pub struct ConcurrentNavigableMap;
+
+impl ConcurrentNavigableMap {
+    pub fn subMap() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentNavigableMap".to_string(), "subMap".to_string(), "(Ljava/lang/Object;ZLjava/lang/Object;Z)Ljava/util/concurrent/ConcurrentNavigableMap;".to_string(), false, None)
+    }
+    pub fn headMap() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentNavigableMap".to_string(), "headMap".to_string(), "(Ljava/lang/Object;Z)Ljava/util/concurrent/ConcurrentNavigableMap;".to_string(), false, None)
+    }
+    pub fn tailMap() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentNavigableMap".to_string(), "tailMap".to_string(), "(Ljava/lang/Object;Z)Ljava/util/concurrent/ConcurrentNavigableMap;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentNavigableMap", ConcurrentNavigableMap::subMap());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentNavigableMap", ConcurrentNavigableMap::headMap());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentNavigableMap", ConcurrentNavigableMap::tailMap());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10773,6 +10794,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     BlockingDeque::register(jvm);
     LinkedBlockingDeque::register(jvm);
     ConcurrentMap::register(jvm);
+    ConcurrentNavigableMap::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

@@ -2381,12 +2381,134 @@ impl ThreadLocal {
     }
 }
 
+// ========== java.lang.ref.WeakReference ==========
+
+pub struct WeakReference;
+
+impl WeakReference {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let referent = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("referent".to_string(), referent);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.WeakReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("referent") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.WeakReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ref.WeakReference", WeakReference::init());
+        jvm.method_area.add_native_method("java.lang.ref.WeakReference", WeakReference::get());
+    }
+}
+
+// ========== java.lang.ref.SoftReference ==========
+
+pub struct SoftReference;
+
+impl SoftReference {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let referent = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("referent".to_string(), referent);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.SoftReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("referent") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.SoftReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ref.SoftReference", SoftReference::init());
+        jvm.method_area.add_native_method("java.lang.ref.SoftReference", SoftReference::get());
+    }
+}
+
+// ========== java.lang.ref.PhantomReference ==========
+
+pub struct PhantomReference;
+
+impl PhantomReference {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let referent = frame.get_local(1)?.clone();
+            let _queue = frame.get_local(2)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("referent".to_string(), referent);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.PhantomReference".to_string(), "<init>".to_string(), "(Ljava/lang/Object;Ljava/lang/ref/ReferenceQueue;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        // PhantomReference.get() always returns null
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| {
+            // PhantomReference.get() always returns null
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.PhantomReference".to_string(), "get".to_string(), "()Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ref.PhantomReference", PhantomReference::init());
+        jvm.method_area.add_native_method("java.lang.ref.PhantomReference", PhantomReference::get());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
     Class::register(jvm);
     Runnable::register(jvm);
     ThreadLocal::register(jvm);
+    WeakReference::register(jvm);
+    SoftReference::register(jvm);
+    PhantomReference::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

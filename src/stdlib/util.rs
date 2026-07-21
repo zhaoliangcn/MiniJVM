@@ -10853,6 +10853,36 @@ impl KeySetView {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentHashMap.ValuesView ==========
+
+pub struct ValuesView;
+
+impl ValuesView {
+    pub fn iterator() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentHashMap$ValuesView".to_string(), "iterator".to_string(), "()Ljava/util/Iterator;".to_string(), false, None)
+    }
+    pub fn size() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentHashMap$ValuesView".to_string(), "size".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentHashMap$ValuesView", ValuesView::iterator());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentHashMap$ValuesView", ValuesView::size());
+    }
+}
+
+// ========== java.util.concurrent.ConcurrentHashMap.EntrySetView ==========
+
+pub struct EntrySetView;
+
+impl EntrySetView {
+    pub fn iterator() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentHashMap$EntrySetView".to_string(), "iterator".to_string(), "()Ljava/util/Iterator;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentHashMap$EntrySetView", EntrySetView::iterator());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10974,6 +11004,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ThreadLocalRandom::register(jvm);
     CompletionException::register(jvm);
     KeySetView::register(jvm);
+    ValuesView::register(jvm);
+    EntrySetView::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

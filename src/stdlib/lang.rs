@@ -2647,6 +2647,84 @@ impl Runtime {
     }
 }
 
+// ========== java.lang.ProcessBuilder ==========
+
+pub struct ProcessBuilder;
+
+impl ProcessBuilder {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _cmd = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("command".to_string(), Value::Null);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ProcessBuilder".to_string(), "<init>".to_string(), "(Ljava/util/List;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn start() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let proc = HeapObject::new("java.lang.Process".to_string());
+            let proc_ref = jvm.allocate(proc)?;
+            if let Some(obj) = jvm.heap.get_mut(proc_ref) {
+                obj.fields.insert("exitValue".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(proc_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ProcessBuilder".to_string(), "start".to_string(), "()Ljava/lang/Process;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ProcessBuilder", ProcessBuilder::init());
+        jvm.method_area.add_native_method("java.lang.ProcessBuilder", ProcessBuilder::start());
+    }
+}
+
+// ========== java.lang.Process ==========
+
+pub struct Process;
+
+impl Process {
+    pub fn waitFor() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Process".to_string(), "waitFor".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn exitValue() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("exitValue")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Process".to_string(), "exitValue".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn destroy() -> Method {
+        Method::new_native("java.lang.Process".to_string(), "destroy".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Process", Process::waitFor());
+        jvm.method_area.add_native_method("java.lang.Process", Process::exitValue());
+        jvm.method_area.add_native_method("java.lang.Process", Process::destroy());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2659,6 +2737,8 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     ReferenceQueue::register(jvm);
     Reference::register(jvm);
     Runtime::register(jvm);
+    ProcessBuilder::register(jvm);
+    Process::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

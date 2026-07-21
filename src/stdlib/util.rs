@@ -10225,6 +10225,29 @@ impl FutureInterface {
     }
 }
 
+// ========== java.util.concurrent.Delayed ==========
+
+pub struct DelayedInterface;
+
+impl DelayedInterface {
+    pub fn getDelay() -> Method {
+        Method::new_native("java.util.concurrent.Delayed".to_string(), "getDelay".to_string(), "(Ljava/util/concurrent/TimeUnit;)J".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.Delayed", DelayedInterface::getDelay());
+    }
+}
+
+// ========== java.util.concurrent.ScheduledFuture ==========
+
+pub struct ScheduledFutureInterface;
+
+impl ScheduledFutureInterface {
+    pub fn register(jvm: &mut JVM) {
+        // ScheduledFuture extends Delayed and Future, no additional methods
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10322,6 +10345,8 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ExecutorInterface::register(jvm);
     ExecutorService::register(jvm);
     FutureInterface::register(jvm);
+    DelayedInterface::register(jvm);
+    ScheduledFutureInterface::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

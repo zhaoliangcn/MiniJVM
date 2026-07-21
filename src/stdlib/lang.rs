@@ -2500,6 +2500,47 @@ impl PhantomReference {
     }
 }
 
+// ========== java.lang.ref.ReferenceQueue ==========
+
+pub struct ReferenceQueue;
+
+impl ReferenceQueue {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("queue".to_string(), Value::Null);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.ReferenceQueue".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn poll() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| {
+            // Simplified: always returns null (no GC notifications)
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.ReferenceQueue".to_string(), "poll".to_string(), "()Ljava/lang/ref/Reference;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn remove() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|_frame, _jvm| {
+            // Simplified: always returns null (no blocking)
+            Ok(())
+        });
+        Method::new_native("java.lang.ref.ReferenceQueue".to_string(), "remove".to_string(), "()Ljava/lang/ref/Reference;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ref.ReferenceQueue", ReferenceQueue::init());
+        jvm.method_area.add_native_method("java.lang.ref.ReferenceQueue", ReferenceQueue::poll());
+        jvm.method_area.add_native_method("java.lang.ref.ReferenceQueue", ReferenceQueue::remove());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2509,6 +2550,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     WeakReference::register(jvm);
     SoftReference::register(jvm);
     PhantomReference::register(jvm);
+    ReferenceQueue::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

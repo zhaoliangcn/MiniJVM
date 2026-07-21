@@ -10836,6 +10836,23 @@ impl CompletionException {
     }
 }
 
+// ========== java.util.concurrent.ConcurrentHashMap.KeySetView ==========
+
+pub struct KeySetView;
+
+impl KeySetView {
+    pub fn getMap() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentHashMap$KeySetView".to_string(), "getMap".to_string(), "()Ljava/util/concurrent/ConcurrentHashMap;".to_string(), false, None)
+    }
+    pub fn iterator() -> Method {
+        Method::new_native("java.util.concurrent.ConcurrentHashMap$KeySetView".to_string(), "iterator".to_string(), "()Ljava/util/Iterator;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentHashMap$KeySetView", KeySetView::getMap());
+        jvm.method_area.add_native_method("java.util.concurrent.ConcurrentHashMap$KeySetView", KeySetView::iterator());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10956,6 +10973,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     DiscardOldestPolicy::register(jvm);
     ThreadLocalRandom::register(jvm);
     CompletionException::register(jvm);
+    KeySetView::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

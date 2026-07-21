@@ -10261,6 +10261,31 @@ impl ThreadFactory {
     }
 }
 
+// ========== java.util.concurrent.CompletionStage ==========
+
+pub struct CompletionStage;
+
+impl CompletionStage {
+    pub fn thenApply() -> Method {
+        Method::new_native("java.util.concurrent.CompletionStage".to_string(), "thenApply".to_string(), "(Ljava/util/function/Function;)Ljava/util/concurrent/CompletionStage;".to_string(), false, None)
+    }
+    pub fn thenAccept() -> Method {
+        Method::new_native("java.util.concurrent.CompletionStage".to_string(), "thenAccept".to_string(), "(Ljava/util/function/Consumer;)Ljava/util/concurrent/CompletionStage;".to_string(), false, None)
+    }
+    pub fn thenRun() -> Method {
+        Method::new_native("java.util.concurrent.CompletionStage".to_string(), "thenRun".to_string(), "(Ljava/lang/Runnable;)Ljava/util/concurrent/CompletionStage;".to_string(), false, None)
+    }
+    pub fn thenCombine() -> Method {
+        Method::new_native("java.util.concurrent.CompletionStage".to_string(), "thenCombine".to_string(), "(Ljava/util/concurrent/CompletionStage;Ljava/util/function/BiFunction;)Ljava/util/concurrent/CompletionStage;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionStage", CompletionStage::thenApply());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionStage", CompletionStage::thenAccept());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionStage", CompletionStage::thenRun());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionStage", CompletionStage::thenCombine());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10361,6 +10386,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     DelayedInterface::register(jvm);
     ScheduledFutureInterface::register(jvm);
     ThreadFactory::register(jvm);
+    CompletionStage::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

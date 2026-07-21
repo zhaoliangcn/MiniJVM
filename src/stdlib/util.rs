@@ -10325,6 +10325,35 @@ impl RejectedExecutionHandler {
     }
 }
 
+// ========== java.util.concurrent.ThreadPoolExecutor ==========
+
+pub struct ThreadPoolExecutor;
+
+impl ThreadPoolExecutor {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.ThreadPoolExecutor".to_string(), "<init>".to_string(), "(IIJLjava/util/concurrent/TimeUnit;Ljava/util/concurrent/BlockingQueue;)V".to_string(), false, None)
+    }
+    pub fn execute() -> Method {
+        Method::new_native("java.util.concurrent.ThreadPoolExecutor".to_string(), "execute".to_string(), "(Ljava/lang/Runnable;)V".to_string(), false, None)
+    }
+    pub fn shutdown() -> Method {
+        Method::new_native("java.util.concurrent.ThreadPoolExecutor".to_string(), "shutdown".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn getPoolSize() -> Method {
+        Method::new_native("java.util.concurrent.ThreadPoolExecutor".to_string(), "getPoolSize".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn getActiveCount() -> Method {
+        Method::new_native("java.util.concurrent.ThreadPoolExecutor".to_string(), "getActiveCount".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadPoolExecutor", ThreadPoolExecutor::init());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadPoolExecutor", ThreadPoolExecutor::execute());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadPoolExecutor", ThreadPoolExecutor::shutdown());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadPoolExecutor", ThreadPoolExecutor::getPoolSize());
+        jvm.method_area.add_native_method("java.util.concurrent.ThreadPoolExecutor", ThreadPoolExecutor::getActiveCount());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10429,6 +10458,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RunnableFuture::register(jvm);
     RunnableScheduledFuture::register(jvm);
     RejectedExecutionHandler::register(jvm);
+    ThreadPoolExecutor::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

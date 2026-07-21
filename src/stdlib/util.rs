@@ -10417,6 +10417,31 @@ impl TransferQueue {
     }
 }
 
+// ========== java.util.concurrent.BlockingDeque ==========
+
+pub struct BlockingDeque;
+
+impl BlockingDeque {
+    pub fn putFirst() -> Method {
+        Method::new_native("java.util.concurrent.BlockingDeque".to_string(), "putFirst".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn putLast() -> Method {
+        Method::new_native("java.util.concurrent.BlockingDeque".to_string(), "putLast".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn takeFirst() -> Method {
+        Method::new_native("java.util.concurrent.BlockingDeque".to_string(), "takeFirst".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn takeLast() -> Method {
+        Method::new_native("java.util.concurrent.BlockingDeque".to_string(), "takeLast".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingDeque", BlockingDeque::putFirst());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingDeque", BlockingDeque::putLast());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingDeque", BlockingDeque::takeFirst());
+        jvm.method_area.add_native_method("java.util.concurrent.BlockingDeque", BlockingDeque::takeLast());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10525,6 +10550,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ScheduledThreadPoolExecutor::register(jvm);
     BlockingQueue::register(jvm);
     TransferQueue::register(jvm);
+    BlockingDeque::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

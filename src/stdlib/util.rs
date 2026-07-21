@@ -10725,6 +10725,46 @@ impl ForkJoinTask {
     }
 }
 
+// ========== java.util.concurrent.ThreadPoolExecutor.AbortPolicy ==========
+
+pub struct AbortPolicy;
+
+impl AbortPolicy {
+    pub fn register(jvm: &mut JVM) {
+        // AbortPolicy implements RejectedExecutionHandler, handled by interface
+    }
+}
+
+// ========== java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy ==========
+
+pub struct CallerRunsPolicy;
+
+impl CallerRunsPolicy {
+    pub fn register(jvm: &mut JVM) {
+        // CallerRunsPolicy implements RejectedExecutionHandler, handled by interface
+    }
+}
+
+// ========== java.util.concurrent.ThreadPoolExecutor.DiscardPolicy ==========
+
+pub struct DiscardPolicy;
+
+impl DiscardPolicy {
+    pub fn register(jvm: &mut JVM) {
+        // DiscardPolicy implements RejectedExecutionHandler, handled by interface
+    }
+}
+
+// ========== java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy ==========
+
+pub struct DiscardOldestPolicy;
+
+impl DiscardOldestPolicy {
+    pub fn register(jvm: &mut JVM) {
+        // DiscardOldestPolicy implements RejectedExecutionHandler, handled by interface
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10839,6 +10879,10 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ConcurrentNavigableMap::register(jvm);
     CountedCompleter::register(jvm);
     ForkJoinTask::register(jvm);
+    AbortPolicy::register(jvm);
+    CallerRunsPolicy::register(jvm);
+    DiscardPolicy::register(jvm);
+    DiscardOldestPolicy::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

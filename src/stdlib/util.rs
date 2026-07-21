@@ -10139,6 +10139,27 @@ impl StampedLock {
     }
 }
 
+// ========== java.util.concurrent.ScheduledExecutorService ==========
+
+pub struct ScheduledExecutorService;
+
+impl ScheduledExecutorService {
+    pub fn schedule() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledExecutorService".to_string(), "schedule".to_string(), "(Ljava/lang/Runnable;JLjava/util/concurrent/TimeUnit;)Ljava/util/concurrent/ScheduledFuture;".to_string(), false, None)
+    }
+    pub fn scheduleAtFixedRate() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledExecutorService".to_string(), "scheduleAtFixedRate".to_string(), "(Ljava/lang/Runnable;JJLjava/util/concurrent/TimeUnit;)Ljava/util/concurrent/ScheduledFuture;".to_string(), false, None)
+    }
+    pub fn scheduleWithFixedDelay() -> Method {
+        Method::new_native("java.util.concurrent.ScheduledExecutorService".to_string(), "scheduleWithFixedDelay".to_string(), "(Ljava/lang/Runnable;JJLjava/util/concurrent/TimeUnit;)Ljava/util/concurrent/ScheduledFuture;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledExecutorService", ScheduledExecutorService::schedule());
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledExecutorService", ScheduledExecutorService::scheduleAtFixedRate());
+        jvm.method_area.add_native_method("java.util.concurrent.ScheduledExecutorService", ScheduledExecutorService::scheduleWithFixedDelay());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10232,6 +10253,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Condition::register(jvm);
     ReentrantReadWriteLock::register(jvm);
     StampedLock::register(jvm);
+    ScheduledExecutorService::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

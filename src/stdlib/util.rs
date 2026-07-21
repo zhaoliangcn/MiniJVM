@@ -10819,6 +10819,23 @@ impl ThreadLocalRandom {
     }
 }
 
+// ========== java.util.concurrent.CompletionException ==========
+
+pub struct CompletionException;
+
+impl CompletionException {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.CompletionException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+    pub fn init_cause() -> Method {
+        Method::new_native("java.util.concurrent.CompletionException".to_string(), "<init>".to_string(), "(Ljava/lang/String;Ljava/lang/Throwable;)V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionException", CompletionException::init());
+        jvm.method_area.add_native_method("java.util.concurrent.CompletionException", CompletionException::init_cause());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -10938,6 +10955,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     DiscardPolicy::register(jvm);
     DiscardOldestPolicy::register(jvm);
     ThreadLocalRandom::register(jvm);
+    CompletionException::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

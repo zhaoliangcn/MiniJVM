@@ -10948,6 +10948,27 @@ impl FlowProcessor {
     }
 }
 
+// ========== java.util.concurrent.SubmissionPublisher ==========
+
+pub struct SubmissionPublisher;
+
+impl SubmissionPublisher {
+    pub fn init() -> Method {
+        Method::new_native("java.util.concurrent.SubmissionPublisher".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn submit() -> Method {
+        Method::new_native("java.util.concurrent.SubmissionPublisher".to_string(), "submit".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+    pub fn close() -> Method {
+        Method::new_native("java.util.concurrent.SubmissionPublisher".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.concurrent.SubmissionPublisher", SubmissionPublisher::init());
+        jvm.method_area.add_native_method("java.util.concurrent.SubmissionPublisher", SubmissionPublisher::submit());
+        jvm.method_area.add_native_method("java.util.concurrent.SubmissionPublisher", SubmissionPublisher::close());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11075,6 +11096,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     FlowSubscriber::register(jvm);
     FlowSubscription::register(jvm);
     FlowProcessor::register(jvm);
+    SubmissionPublisher::register(jvm);
     Date::register(jvm);
     Scanner::register(jvm);
 }

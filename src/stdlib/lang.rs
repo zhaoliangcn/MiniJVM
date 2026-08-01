@@ -2988,6 +2988,33 @@ impl ThreadGroup {
     }
 }
 
+// ========== java.lang.Void ==========
+
+pub struct VoidType;
+
+impl VoidType {
+    pub fn register(jvm: &mut JVM) {
+        // Void is a placeholder class, no methods to register
+    }
+}
+
+// ========== java.lang.ClassLoader ==========
+
+pub struct ClassLoader;
+
+impl ClassLoader {
+    pub fn loadClass() -> Method {
+        Method::new_native("java.lang.ClassLoader".to_string(), "loadClass".to_string(), "(Ljava/lang/String;)Ljava/lang/Class;".to_string(), false, None)
+    }
+    pub fn getSystemClassLoader() -> Method {
+        Method::new_native("java.lang.ClassLoader".to_string(), "getSystemClassLoader".to_string(), "()Ljava/lang/ClassLoader;".to_string(), true, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ClassLoader", ClassLoader::loadClass());
+        jvm.method_area.add_native_method("java.lang.ClassLoader", ClassLoader::getSystemClassLoader());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3011,6 +3038,8 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Enum::register(jvm);
     StackTraceElement::register(jvm);
     ThreadGroup::register(jvm);
+    VoidType::register(jvm);
+    ClassLoader::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

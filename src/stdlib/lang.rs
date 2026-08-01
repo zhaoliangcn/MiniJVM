@@ -2812,6 +2812,93 @@ impl Cloneable {
     }
 }
 
+// ========== java.lang.Enum ==========
+
+pub struct Enum;
+
+impl Enum {
+    pub fn name() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Enum".to_string(), "name".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn ordinal() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let ord = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("ordinal")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(ord))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Enum".to_string(), "ordinal".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn compareTo() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let other_ref = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            let this_ord = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("ordinal")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            let other_ord = if let Value::ObjectRef(other_id) = other_ref {
+                if let Some(obj) = jvm.heap.get(other_id) {
+                    obj.fields.get("ordinal")
+                        .and_then(|v| if let Value::Int(v) = v { Some(*v) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(this_ord - other_ord))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Enum".to_string(), "compareTo".to_string(), "(Ljava/lang/Enum;)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Enum".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Enum", Enum::name());
+        jvm.method_area.add_native_method("java.lang.Enum", Enum::ordinal());
+        jvm.method_area.add_native_method("java.lang.Enum", Enum::compareTo());
+        jvm.method_area.add_native_method("java.lang.Enum", Enum::toString());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2832,6 +2919,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     AutoCloseable::register(jvm);
     Closeable::register(jvm);
     Cloneable::register(jvm);
+    Enum::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

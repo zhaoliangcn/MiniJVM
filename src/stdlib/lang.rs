@@ -3015,6 +3015,27 @@ impl ClassLoader {
     }
 }
 
+// ========== java.lang.Package ==========
+
+pub struct Package;
+
+impl Package {
+    pub fn getName() -> Method {
+        Method::new_native("java.lang.Package".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn getImplementationTitle() -> Method {
+        Method::new_native("java.lang.Package".to_string(), "getImplementationTitle".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn getImplementationVersion() -> Method {
+        Method::new_native("java.lang.Package".to_string(), "getImplementationVersion".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Package", Package::getName());
+        jvm.method_area.add_native_method("java.lang.Package", Package::getImplementationTitle());
+        jvm.method_area.add_native_method("java.lang.Package", Package::getImplementationVersion());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3040,6 +3061,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     ThreadGroup::register(jvm);
     VoidType::register(jvm);
     ClassLoader::register(jvm);
+    Package::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

@@ -2899,6 +2899,35 @@ impl Enum {
     }
 }
 
+// ========== java.lang.StackTraceElement ==========
+
+pub struct StackTraceElement;
+
+impl StackTraceElement {
+    pub fn init() -> Method {
+        Method::new_native("java.lang.StackTraceElement".to_string(), "<init>".to_string(), "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V".to_string(), false, None)
+    }
+    pub fn getClassName() -> Method {
+        Method::new_native("java.lang.StackTraceElement".to_string(), "getClassName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn getMethodName() -> Method {
+        Method::new_native("java.lang.StackTraceElement".to_string(), "getMethodName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn getFileName() -> Method {
+        Method::new_native("java.lang.StackTraceElement".to_string(), "getFileName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+    pub fn getLineNumber() -> Method {
+        Method::new_native("java.lang.StackTraceElement".to_string(), "getLineNumber".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.StackTraceElement", StackTraceElement::init());
+        jvm.method_area.add_native_method("java.lang.StackTraceElement", StackTraceElement::getClassName());
+        jvm.method_area.add_native_method("java.lang.StackTraceElement", StackTraceElement::getMethodName());
+        jvm.method_area.add_native_method("java.lang.StackTraceElement", StackTraceElement::getFileName());
+        jvm.method_area.add_native_method("java.lang.StackTraceElement", StackTraceElement::getLineNumber());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2920,6 +2949,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Closeable::register(jvm);
     Cloneable::register(jvm);
     Enum::register(jvm);
+    StackTraceElement::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

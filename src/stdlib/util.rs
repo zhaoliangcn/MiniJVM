@@ -10969,6 +10969,109 @@ impl SubmissionPublisher {
     }
 }
 
+// ========== java.util.EnumSet ==========
+
+pub struct EnumSet;
+
+impl EnumSet {
+    pub fn noneOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _clazz = frame.pop()?;
+            let set = HeapObject::new("java.util.EnumSet".to_string());
+            let set_ref = jvm.allocate(set)?;
+            if let Some(obj) = jvm.heap.get_mut(set_ref) {
+                obj.fields.insert("elements".to_string(), Value::Null);
+                obj.fields.insert("size".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(set_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "noneOf".to_string(), "(Ljava/lang/Class;)Ljava/util/EnumSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn allOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let _clazz = frame.pop()?;
+            let set = HeapObject::new("java.util.EnumSet".to_string());
+            let set_ref = jvm.allocate(set)?;
+            if let Some(obj) = jvm.heap.get_mut(set_ref) {
+                obj.fields.insert("elements".to_string(), Value::Null);
+                obj.fields.insert("size".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(set_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "allOf".to_string(), "(Ljava/lang/Class;)Ljava/util/EnumSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn of() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let first = frame.pop()?;
+            let set = HeapObject::new("java.util.EnumSet".to_string());
+            let set_ref = jvm.allocate(set)?;
+            if let Some(obj) = jvm.heap.get_mut(set_ref) {
+                obj.fields.insert("first".to_string(), first);
+                obj.fields.insert("size".to_string(), Value::Int(1));
+            }
+            frame.push(Value::ObjectRef(set_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "of".to_string(), "(Ljava/lang/Enum;)Ljava/util/EnumSet;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn add() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let elem = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let size = obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0);
+                    obj.fields.insert("size".to_string(), Value::Int(size + 1));
+                    obj.fields.insert("elem".to_string(), elem);
+                }
+            }
+            frame.push(Value::Boolean(true))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "add".to_string(), "(Ljava/lang/Enum;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn contains() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Boolean(false))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "contains".to_string(), "(Ljava/lang/Object;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn size() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let size = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("size")
+                        .and_then(|v| if let Value::Int(s) = v { Some(*s) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(size))?;
+            Ok(())
+        });
+        Method::new_native("java.util.EnumSet".to_string(), "size".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::noneOf());
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::allOf());
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::of());
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::add());
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::contains());
+        jvm.method_area.add_native_method("java.util.EnumSet", EnumSet::size());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11013,6 +11116,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     TreeMap::register(jvm);
     HashSet::register(jvm);
     LinkedHashSet::register(jvm);
+    EnumSet::register(jvm);
     PriorityQueue::register(jvm);
     Random::register(jvm);
     UUID::register(jvm);

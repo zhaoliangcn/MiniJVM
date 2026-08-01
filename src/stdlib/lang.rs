@@ -2755,6 +2755,27 @@ impl Appendable {
     }
 }
 
+// ========== java.lang.CharSequence ==========
+
+pub struct CharSequence;
+
+impl CharSequence {
+    pub fn length() -> Method {
+        Method::new_native("java.lang.CharSequence".to_string(), "length".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn charAt() -> Method {
+        Method::new_native("java.lang.CharSequence".to_string(), "charAt".to_string(), "(I)C".to_string(), false, None)
+    }
+    pub fn subSequence() -> Method {
+        Method::new_native("java.lang.CharSequence".to_string(), "subSequence".to_string(), "(II)Ljava/lang/CharSequence;".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.CharSequence", CharSequence::length());
+        jvm.method_area.add_native_method("java.lang.CharSequence", CharSequence::charAt());
+        jvm.method_area.add_native_method("java.lang.CharSequence", CharSequence::subSequence());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2771,6 +2792,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Process::register(jvm);
     Comparable::register(jvm);
     Appendable::register(jvm);
+    CharSequence::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

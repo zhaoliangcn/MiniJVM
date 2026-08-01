@@ -2776,6 +2776,32 @@ impl CharSequence {
     }
 }
 
+// ========== java.lang.AutoCloseable ==========
+
+pub struct AutoCloseable;
+
+impl AutoCloseable {
+    pub fn close() -> Method {
+        Method::new_native("java.lang.AutoCloseable".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.AutoCloseable", AutoCloseable::close());
+    }
+}
+
+// ========== java.io.Closeable ==========
+
+pub struct Closeable;
+
+impl Closeable {
+    pub fn close() -> Method {
+        Method::new_native("java.io.Closeable".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.Closeable", Closeable::close());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2793,6 +2819,8 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Comparable::register(jvm);
     Appendable::register(jvm);
     CharSequence::register(jvm);
+    AutoCloseable::register(jvm);
+    Closeable::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

@@ -2802,6 +2802,16 @@ impl Closeable {
     }
 }
 
+// ========== java.lang.Cloneable ==========
+
+pub struct Cloneable;
+
+impl Cloneable {
+    pub fn register(jvm: &mut JVM) {
+        // Cloneable is a marker interface, no methods to register
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2821,6 +2831,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     CharSequence::register(jvm);
     AutoCloseable::register(jvm);
     Closeable::register(jvm);
+    Cloneable::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

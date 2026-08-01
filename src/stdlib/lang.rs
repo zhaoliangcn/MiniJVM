@@ -3036,6 +3036,31 @@ impl Package {
     }
 }
 
+// ========== java.lang.Number ==========
+
+pub struct Number;
+
+impl Number {
+    pub fn intValue() -> Method {
+        Method::new_native("java.lang.Number".to_string(), "intValue".to_string(), "()I".to_string(), false, None)
+    }
+    pub fn longValue() -> Method {
+        Method::new_native("java.lang.Number".to_string(), "longValue".to_string(), "()J".to_string(), false, None)
+    }
+    pub fn floatValue() -> Method {
+        Method::new_native("java.lang.Number".to_string(), "floatValue".to_string(), "()F".to_string(), false, None)
+    }
+    pub fn doubleValue() -> Method {
+        Method::new_native("java.lang.Number".to_string(), "doubleValue".to_string(), "()D".to_string(), false, None)
+    }
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Number", Number::intValue());
+        jvm.method_area.add_native_method("java.lang.Number", Number::longValue());
+        jvm.method_area.add_native_method("java.lang.Number", Number::floatValue());
+        jvm.method_area.add_native_method("java.lang.Number", Number::doubleValue());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3062,6 +3087,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     VoidType::register(jvm);
     ClassLoader::register(jvm);
     Package::register(jvm);
+    Number::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

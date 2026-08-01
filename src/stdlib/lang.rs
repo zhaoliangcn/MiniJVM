@@ -2928,6 +2928,66 @@ impl StackTraceElement {
     }
 }
 
+// ========== java.lang.ThreadGroup ==========
+
+pub struct ThreadGroup;
+
+impl ThreadGroup {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let name_ref = frame.get_local(1)?.clone();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("name".to_string(), name_ref);
+                    obj.fields.insert("activeCount".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadGroup".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadGroup".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn activeCount() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let count = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("activeCount")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(count))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.ThreadGroup".to_string(), "activeCount".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.ThreadGroup", ThreadGroup::init());
+        jvm.method_area.add_native_method("java.lang.ThreadGroup", ThreadGroup::getName());
+        jvm.method_area.add_native_method("java.lang.ThreadGroup", ThreadGroup::activeCount());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -2950,6 +3010,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Cloneable::register(jvm);
     Enum::register(jvm);
     StackTraceElement::register(jvm);
+    ThreadGroup::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

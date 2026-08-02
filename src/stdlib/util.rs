@@ -12163,6 +12163,26 @@ impl ElementType {
     }
 }
 
+// ========== java.lang.annotation.Inherited ==========
+
+pub struct Inherited;
+
+impl Inherited {
+    pub fn register(jvm: &mut JVM) {
+        // Inherited is a marker meta-annotation
+    }
+}
+
+// ========== java.lang.annotation.Repeatable ==========
+
+pub struct Repeatable;
+
+impl Repeatable {
+    pub fn register(jvm: &mut JVM) {
+        // Repeatable is a meta-annotation indicating repeatable annotations
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12315,5 +12335,7 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Target::register(jvm);
     Documented::register(jvm);
     ElementType::register(jvm);
+    Inherited::register(jvm);
+    Repeatable::register(jvm);
     Scanner::register(jvm);
 }

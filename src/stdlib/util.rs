@@ -11423,6 +11423,67 @@ impl GregorianCalendar {
     }
 }
 
+// ========== java.util.TimeZone ==========
+
+pub struct TimeZone;
+
+impl TimeZone {
+    pub fn getDefault() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let tz = HeapObject::new("java.util.TimeZone".to_string());
+            let tz_ref = jvm.allocate(tz)?;
+            let id_obj = HeapObject::new_string("java.lang.String".to_string(), "UTC".to_string());
+            let id_ref = jvm.allocate(id_obj)?;
+            if let Some(obj) = jvm.heap.get_mut(tz_ref) {
+                obj.fields.insert("ID".to_string(), Value::ObjectRef(id_ref));
+            }
+            frame.push(Value::ObjectRef(tz_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.TimeZone".to_string(), "getDefault".to_string(), "()Ljava/util/TimeZone;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn getID() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("ID") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.TimeZone".to_string(), "getID".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getOffset() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.TimeZone".to_string(), "getOffset".to_string(), "(JJ)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getRawOffset() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Int(0))?;
+            Ok(())
+        });
+        Method::new_native("java.util.TimeZone".to_string(), "getRawOffset".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.TimeZone", TimeZone::getDefault());
+        jvm.method_area.add_native_method("java.util.TimeZone", TimeZone::getID());
+        jvm.method_area.add_native_method("java.util.TimeZone", TimeZone::getOffset());
+        jvm.method_area.add_native_method("java.util.TimeZone", TimeZone::getRawOffset());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11556,5 +11617,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Date::register(jvm);
     Calendar::register(jvm);
     GregorianCalendar::register(jvm);
+    TimeZone::register(jvm);
     Scanner::register(jvm);
 }

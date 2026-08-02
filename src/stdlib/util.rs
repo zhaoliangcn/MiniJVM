@@ -12008,6 +12008,36 @@ impl ReflectType {
     }
 }
 
+// ========== java.lang.reflect.GenericDeclaration ==========
+
+pub struct ReflectGenericDeclaration;
+
+impl ReflectGenericDeclaration {
+    pub fn getTypeParameters() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("typeParameters") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            // Return an empty array
+            let arr = HeapObject::new_array("[Ljava/lang/reflect/TypeVariable;".to_string(), 0);
+            let arr_ref = jvm.allocate(arr)?;
+            frame.push(Value::ArrayRef(arr_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.GenericDeclaration".to_string(), "getTypeParameters".to_string(), "()[Ljava/lang/reflect/TypeVariable;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.GenericDeclaration", ReflectGenericDeclaration::getTypeParameters());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12152,5 +12182,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectMember::register(jvm);
     ReflectAccessibleObject::register(jvm);
     ReflectType::register(jvm);
+    ReflectGenericDeclaration::register(jvm);
     Scanner::register(jvm);
 }

@@ -3250,6 +3250,63 @@ impl StringBuffer {
     }
 }
 
+// ========== java.lang.Short ==========
+
+pub struct Short;
+
+impl Short {
+    pub fn parseShort() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i16>() {
+                            frame.push(Value::Short(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Short(0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Short".to_string(), "parseShort".to_string(), "(Ljava/lang/String;)S".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_int() as i16;
+            let obj = HeapObject::new("java.lang.Short".to_string());
+            let obj_ref = jvm.allocate(obj)?;
+            if let Some(o) = jvm.heap.get_mut(obj_ref) {
+                o.fields.insert("value".to_string(), Value::Short(val));
+            }
+            frame.push(Value::ObjectRef(obj_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Short".to_string(), "valueOf".to_string(), "(S)Ljava/lang/Short;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_int();
+            let s = val.to_string();
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+            let str_ref = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(str_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Short".to_string(), "toString".to_string(), "(S)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Short", Short::parseShort());
+        jvm.method_area.add_native_method("java.lang.Short", Short::valueOf());
+        jvm.method_area.add_native_method("java.lang.Short", Short::toString());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3279,6 +3336,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Number::register(jvm);
     Character::register(jvm);
     StringBuffer::register(jvm);
+    Short::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

@@ -3061,6 +3061,81 @@ impl Number {
     }
 }
 
+// ========== java.lang.Character ==========
+
+pub struct Character;
+
+impl Character {
+    pub fn isLetter() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let is_letter = char::from_u32(ch).map(|c| c.is_alphabetic()).unwrap_or(false);
+            frame.push(Value::Boolean(is_letter))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "isLetter".to_string(), "(C)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isDigit() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let is_digit = char::from_u32(ch).map(|c| c.is_digit(10)).unwrap_or(false);
+            frame.push(Value::Boolean(is_digit))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "isDigit".to_string(), "(C)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isWhitespace() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let is_ws = char::from_u32(ch).map(|c| c.is_whitespace()).unwrap_or(false);
+            frame.push(Value::Boolean(is_ws))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "isWhitespace".to_string(), "(C)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isLetterOrDigit() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let is_lod = char::from_u32(ch).map(|c| c.is_alphanumeric()).unwrap_or(false);
+            frame.push(Value::Boolean(is_lod))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "isLetterOrDigit".to_string(), "(C)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toUpperCase() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let upper = char::from_u32(ch).map(|c| c.to_uppercase().next().unwrap_or(c) as i32).unwrap_or(ch as i32);
+            frame.push(Value::Int(upper))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "toUpperCase".to_string(), "(C)C".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toLowerCase() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let ch = frame.pop()?.as_int() as u32;
+            let lower = char::from_u32(ch).map(|c| c.to_lowercase().next().unwrap_or(c) as i32).unwrap_or(ch as i32);
+            frame.push(Value::Int(lower))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Character".to_string(), "toLowerCase".to_string(), "(C)C".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Character", Character::isLetter());
+        jvm.method_area.add_native_method("java.lang.Character", Character::isDigit());
+        jvm.method_area.add_native_method("java.lang.Character", Character::isWhitespace());
+        jvm.method_area.add_native_method("java.lang.Character", Character::isLetterOrDigit());
+        jvm.method_area.add_native_method("java.lang.Character", Character::toUpperCase());
+        jvm.method_area.add_native_method("java.lang.Character", Character::toLowerCase());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3088,6 +3163,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     ClassLoader::register(jvm);
     Package::register(jvm);
     Number::register(jvm);
+    Character::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

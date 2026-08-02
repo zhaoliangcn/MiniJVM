@@ -11560,6 +11560,92 @@ impl ReflectArray {
     }
 }
 
+// ========== java.lang.reflect.Field ==========
+
+pub struct ReflectField;
+
+impl ReflectField {
+    pub fn getName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Field".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let obj_ref = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(field) = jvm.heap.get(*this_id) {
+                    if let Some(name_val) = field.fields.get("name") {
+                        if let Value::ObjectRef(name_id) = name_val {
+                            if let Some(name_obj) = jvm.heap.get(*name_id) {
+                                if let Some(field_name) = &name_obj.string_value {
+                                    if let Value::ObjectRef(target_id) = obj_ref {
+                                        if let Some(target) = jvm.heap.get(target_id) {
+                                            if let Some(val) = target.fields.get(field_name) {
+                                                frame.push(val.clone())?;
+                                                return Ok(());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Field".to_string(), "get".to_string(), "(Ljava/lang/Object;)Ljava/lang/Object;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let obj_ref = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            // Extract field name first (owned String)
+            let field_name = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(field) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(name_id)) = field.fields.get("name") {
+                        if let Some(name_obj) = jvm.heap.get(*name_id) {
+                            name_obj.string_value.clone()
+                        } else { None }
+                    } else { None }
+                } else { None }
+            } else { None };
+            if let Some(fname) = field_name {
+                if let Value::ObjectRef(target_id) = obj_ref {
+                    if let Some(target) = jvm.heap.get_mut(target_id) {
+                        target.fields.insert(fname, value);
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Field".to_string(), "set".to_string(), "(Ljava/lang/Object;Ljava/lang/Object;)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Field", ReflectField::getName());
+        jvm.method_area.add_native_method("java.lang.reflect.Field", ReflectField::get());
+        jvm.method_area.add_native_method("java.lang.reflect.Field", ReflectField::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11695,5 +11781,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     GregorianCalendar::register(jvm);
     TimeZone::register(jvm);
     ReflectArray::register(jvm);
+    ReflectField::register(jvm);
     Scanner::register(jvm);
 }

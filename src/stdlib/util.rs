@@ -12113,6 +12113,46 @@ impl AnnotationInterface {
     }
 }
 
+// ========== java.lang.annotation.Retention ==========
+
+pub struct Retention;
+
+impl Retention {
+    pub fn register(jvm: &mut JVM) {
+        // Retention is a meta-annotation, no runtime methods
+    }
+}
+
+// ========== java.lang.annotation.RetentionPolicy ==========
+
+pub struct RetentionPolicy;
+
+impl RetentionPolicy {
+    pub fn register(jvm: &mut JVM) {
+        // RetentionPolicy is an enum: SOURCE/CLASS/RUNTIME
+    }
+}
+
+// ========== java.lang.annotation.Target ==========
+
+pub struct Target;
+
+impl Target {
+    pub fn register(jvm: &mut JVM) {
+        // Target is a meta-annotation, no runtime methods
+    }
+}
+
+// ========== java.lang.annotation.Documented ==========
+
+pub struct Documented;
+
+impl Documented {
+    pub fn register(jvm: &mut JVM) {
+        // Documented is a marker meta-annotation
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12260,5 +12300,9 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectGenericDeclaration::register(jvm);
     ReflectAnnotatedElement::register(jvm);
     AnnotationInterface::register(jvm);
+    Retention::register(jvm);
+    RetentionPolicy::register(jvm);
+    Target::register(jvm);
+    Documented::register(jvm);
     Scanner::register(jvm);
 }

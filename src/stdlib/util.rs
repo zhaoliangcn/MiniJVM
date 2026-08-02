@@ -12038,6 +12038,36 @@ impl ReflectGenericDeclaration {
     }
 }
 
+// ========== java.lang.reflect.AnnotatedElement ==========
+
+pub struct ReflectAnnotatedElement;
+
+impl ReflectAnnotatedElement {
+    pub fn getAnnotations() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            // Return an empty annotations array
+            let arr = HeapObject::new_array("[Ljava/lang/annotation/Annotation;".to_string(), 0);
+            let arr_ref = jvm.allocate(arr)?;
+            frame.push(Value::ArrayRef(arr_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.AnnotatedElement".to_string(), "getAnnotations".to_string(), "()[Ljava/lang/annotation/Annotation;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isAnnotationPresent() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            frame.push(Value::Boolean(false))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.AnnotatedElement".to_string(), "isAnnotationPresent".to_string(), "(Ljava/lang/Class;)Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.AnnotatedElement", ReflectAnnotatedElement::getAnnotations());
+        jvm.method_area.add_native_method("java.lang.reflect.AnnotatedElement", ReflectAnnotatedElement::isAnnotationPresent());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12183,5 +12213,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectAccessibleObject::register(jvm);
     ReflectType::register(jvm);
     ReflectGenericDeclaration::register(jvm);
+    ReflectAnnotatedElement::register(jvm);
     Scanner::register(jvm);
 }

@@ -12153,6 +12153,16 @@ impl Documented {
     }
 }
 
+// ========== java.lang.annotation.ElementType ==========
+
+pub struct ElementType;
+
+impl ElementType {
+    pub fn register(jvm: &mut JVM) {
+        // ElementType is an enum: TYPE/FIELD/METHOD/PARAMETER/CONSTRUCTOR/LOCAL_VARIABLE/ANNOTATION_TYPE/PACKAGE
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12304,5 +12314,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     RetentionPolicy::register(jvm);
     Target::register(jvm);
     Documented::register(jvm);
+    ElementType::register(jvm);
     Scanner::register(jvm);
 }

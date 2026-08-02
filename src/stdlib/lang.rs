@@ -3307,6 +3307,63 @@ impl Short {
     }
 }
 
+// ========== java.lang.Byte ==========
+
+pub struct Byte;
+
+impl Byte {
+    pub fn parseByte() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let str_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(str_id) = str_ref {
+                if let Some(str_obj) = jvm.heap.get(*str_id) {
+                    if let Some(s) = &str_obj.string_value {
+                        if let Ok(v) = s.parse::<i8>() {
+                            frame.push(Value::Byte(v))?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Byte(0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Byte".to_string(), "parseByte".to_string(), "(Ljava/lang/String;)B".to_string(), true, Some(native_impl))
+    }
+
+    pub fn valueOf() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_int() as i8;
+            let obj = HeapObject::new("java.lang.Byte".to_string());
+            let obj_ref = jvm.allocate(obj)?;
+            if let Some(o) = jvm.heap.get_mut(obj_ref) {
+                o.fields.insert("value".to_string(), Value::Byte(val));
+            }
+            frame.push(Value::ObjectRef(obj_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Byte".to_string(), "valueOf".to_string(), "(B)Ljava/lang/Byte;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let val = frame.pop()?.as_int();
+            let s = val.to_string();
+            let str_obj = HeapObject::new_string("java.lang.String".to_string(), s);
+            let str_ref = jvm.allocate(str_obj)?;
+            frame.push(Value::ObjectRef(str_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.Byte".to_string(), "toString".to_string(), "(B)Ljava/lang/String;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.Byte", Byte::parseByte());
+        jvm.method_area.add_native_method("java.lang.Byte", Byte::valueOf());
+        jvm.method_area.add_native_method("java.lang.Byte", Byte::toString());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3337,6 +3394,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Character::register(jvm);
     StringBuffer::register(jvm);
     Short::register(jvm);
+    Byte::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

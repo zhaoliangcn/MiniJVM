@@ -897,6 +897,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     BufferedOutputStream::register(jvm);
     PrintWriter::register(jvm);
     BufferedReader::register(jvm);
+    BufferedWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1102,5 +1103,49 @@ impl BufferedReader {
         jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::read());
         jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::readLine());
         jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::close());
+    }
+}
+
+// ========== java.io.BufferedWriter ==========
+
+pub struct BufferedWriter;
+
+impl BufferedWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "<init>".to_string(), "(Ljava/io/Writer;)V".to_string(), false, None)
+    }
+
+    pub fn init_size() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "<init>".to_string(), "(Ljava/io/Writer;I)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn write_int() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "write".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn newLine() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "newLine".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.BufferedWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::init());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::init_size());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::write());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::write_int());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::newLine());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::flush());
+        jvm.method_area.add_native_method("java.io.BufferedWriter", BufferedWriter::close());
     }
 }

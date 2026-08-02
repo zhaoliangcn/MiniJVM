@@ -11338,6 +11338,91 @@ impl Calendar {
     }
 }
 
+// ========== java.util.GregorianCalendar ==========
+
+pub struct GregorianCalendar;
+
+impl GregorianCalendar {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("time".to_string(), Value::Long(0));
+                    obj.fields.insert("year".to_string(), Value::Int(1970));
+                    obj.fields.insert("month".to_string(), Value::Int(0));
+                    obj.fields.insert("day".to_string(), Value::Int(1));
+                    obj.fields.insert("hour".to_string(), Value::Int(0));
+                    obj.fields.insert("minute".to_string(), Value::Int(0));
+                    obj.fields.insert("second".to_string(), Value::Int(0));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.GregorianCalendar".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let field = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let key = match field {
+                        1 => "year",
+                        2 => "month",
+                        5 => "day",
+                        10 => "hour",
+                        12 => "minute",
+                        13 => "second",
+                        _ => "time",
+                    };
+                    obj.fields.get(key)
+                        .and_then(|v| match v {
+                            Value::Int(v) => Some(*v),
+                            Value::Long(v) => Some(*v as i32),
+                            _ => None,
+                        })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.GregorianCalendar".to_string(), "get".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?.as_int();
+            let field = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let key = match field {
+                        1 => "year",
+                        2 => "month",
+                        5 => "day",
+                        10 => "hour",
+                        12 => "minute",
+                        13 => "second",
+                        _ => "time",
+                    };
+                    obj.fields.insert(key.to_string(), Value::Int(value));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.GregorianCalendar".to_string(), "set".to_string(), "(II)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.GregorianCalendar", GregorianCalendar::init());
+        jvm.method_area.add_native_method("java.util.GregorianCalendar", GregorianCalendar::get());
+        jvm.method_area.add_native_method("java.util.GregorianCalendar", GregorianCalendar::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11470,5 +11555,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     SubmissionPublisher::register(jvm);
     Date::register(jvm);
     Calendar::register(jvm);
+    GregorianCalendar::register(jvm);
     Scanner::register(jvm);
 }

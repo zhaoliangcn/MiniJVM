@@ -3136,6 +3136,120 @@ impl Character {
     }
 }
 
+// ========== java.lang.StringBuffer ==========
+
+pub struct StringBuffer;
+
+impl StringBuffer {
+    pub fn init() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("content".to_string(), Value::Null);
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuffer".to_string(), "<init>".to_string(), "()V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                // Extract current content (immutable borrow)
+                let current_str = if let Some(Value::ObjectRef(s_id)) = jvm.heap.get(*this_id)
+                    .and_then(|obj| obj.fields.get("content")) {
+                    if let Some(s_obj) = jvm.heap.get(*s_id) {
+                        s_obj.string_value.clone().unwrap_or_default()
+                    } else { StdString::new() }
+                } else { StdString::new() };
+                let append_str = if let Value::ObjectRef(v_id) = &value {
+                    if let Some(v_obj) = jvm.heap.get(*v_id) {
+                        v_obj.string_value.clone().unwrap_or_default()
+                    } else { StdString::new() }
+                } else {
+                    match &value {
+                        Value::Int(v) => v.to_string(),
+                        Value::Long(v) => v.to_string(),
+                        Value::Float(v) => v.to_string(),
+                        Value::Double(v) => v.to_string(),
+                        Value::Boolean(v) => v.to_string(),
+                        Value::Char(v) => v.to_string(),
+                        Value::Null => "null".to_string(),
+                        _ => StdString::new(),
+                    }
+                };
+                let result = current_str + &append_str;
+                let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                let result_ref = jvm.allocate(result_obj)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("content".to_string(), Value::ObjectRef(result_ref));
+                }
+            }
+            frame.push(Value::ObjectRef(this_ref.as_ref()))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuffer".to_string(), "append".to_string(), "(Ljava/lang/String;)Ljava/lang/StringBuffer;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn append_int() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                let current_str = if let Some(Value::ObjectRef(s_id)) = jvm.heap.get(*this_id)
+                    .and_then(|obj| obj.fields.get("content")) {
+                    if let Some(s_obj) = jvm.heap.get(*s_id) {
+                        s_obj.string_value.clone().unwrap_or_default()
+                    } else { StdString::new() }
+                } else { StdString::new() };
+                let result = current_str + &value.to_string();
+                let result_obj = HeapObject::new_string("java.lang.String".to_string(), result);
+                let result_ref = jvm.allocate(result_obj)?;
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("content".to_string(), Value::ObjectRef(result_ref));
+                }
+            }
+            frame.push(Value::ObjectRef(this_ref.as_ref()))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuffer".to_string(), "append".to_string(), "(I)Ljava/lang/StringBuffer;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(Value::ObjectRef(s_id)) = obj.fields.get("content") {
+                        if let Some(s_obj) = jvm.heap.get(*s_id) {
+                            if let Some(s) = &s_obj.string_value {
+                                let result = HeapObject::new_string("java.lang.String".to_string(), s.clone());
+                                let r = jvm.allocate(result)?;
+                                frame.push(Value::ObjectRef(r))?;
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.StringBuffer".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.StringBuffer", StringBuffer::init());
+        jvm.method_area.add_native_method("java.lang.StringBuffer", StringBuffer::append());
+        jvm.method_area.add_native_method("java.lang.StringBuffer", StringBuffer::append_int());
+        jvm.method_area.add_native_method("java.lang.StringBuffer", StringBuffer::toString());
+    }
+}
+
 pub fn register_standard_classes(jvm: &mut JVM) {
     Object::register(jvm);
     Record::register(jvm);
@@ -3164,6 +3278,7 @@ pub fn register_standard_classes(jvm: &mut JVM) {
     Package::register(jvm);
     Number::register(jvm);
     Character::register(jvm);
+    StringBuffer::register(jvm);
     String::register(jvm);
     StringBuilder::register(jvm);
     Integer::register(jvm);

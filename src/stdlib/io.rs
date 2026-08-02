@@ -895,6 +895,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     ByteArrayOutputStream::register(jvm);
     BufferedInputStream::register(jvm);
     BufferedOutputStream::register(jvm);
+    PrintWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1017,5 +1018,54 @@ impl BufferedOutputStream {
         jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::write());
         jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::flush());
         jvm.method_area.add_native_method("java.io.BufferedOutputStream", BufferedOutputStream::close());
+    }
+}
+
+// ========== java.io.PrintWriter ==========
+
+pub struct PrintWriter;
+
+impl PrintWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "<init>".to_string(), "(Ljava/io/OutputStream;)V".to_string(), false, None)
+    }
+
+    pub fn print() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "print".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn print_int() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "print".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn println() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "println".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn println_empty() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "println".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PrintWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::init());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::print());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::print_int());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::println());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::println_empty());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::write());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::flush());
+        jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::close());
     }
 }

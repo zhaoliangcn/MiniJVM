@@ -914,6 +914,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     FileWriter::register(jvm);
     RandomAccessFile::register(jvm);
     FileDescriptor::register(jvm);
+    SequenceInputStream::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1662,5 +1663,34 @@ impl FileDescriptor {
         jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::init());
         jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::sync());
         jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::valid());
+    }
+}
+
+// ========== java.io.SequenceInputStream ==========
+
+pub struct SequenceInputStream;
+
+impl SequenceInputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.SequenceInputStream".to_string(), "<init>".to_string(), "(Ljava/util/Enumeration;)V".to_string(), false, None)
+    }
+
+    pub fn init_two() -> Method {
+        Method::new_native("java.io.SequenceInputStream".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;Ljava/io/InputStream;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.SequenceInputStream".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.SequenceInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::init());
+        jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::init_two());
+        jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::read());
+        jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::close());
     }
 }

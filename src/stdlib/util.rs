@@ -11229,6 +11229,115 @@ impl EnumMap {
     }
 }
 
+// ========== java.util.Calendar ==========
+
+pub struct Calendar;
+
+impl Calendar {
+    pub fn getInstance() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let cal = HeapObject::new("java.util.Calendar".to_string());
+            let cal_ref = jvm.allocate(cal)?;
+            if let Some(obj) = jvm.heap.get_mut(cal_ref) {
+                obj.fields.insert("time".to_string(), Value::Long(0));
+                obj.fields.insert("year".to_string(), Value::Int(1970));
+                obj.fields.insert("month".to_string(), Value::Int(0));
+                obj.fields.insert("day".to_string(), Value::Int(1));
+                obj.fields.insert("hour".to_string(), Value::Int(0));
+                obj.fields.insert("minute".to_string(), Value::Int(0));
+                obj.fields.insert("second".to_string(), Value::Int(0));
+            }
+            frame.push(Value::ObjectRef(cal_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Calendar".to_string(), "getInstance".to_string(), "()Ljava/util/Calendar;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let field = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            let val = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let key = match field {
+                        1 => "year",
+                        2 => "month",
+                        5 => "day",
+                        10 => "hour",
+                        12 => "minute",
+                        13 => "second",
+                        _ => "time",
+                    };
+                    obj.fields.get(key)
+                        .and_then(|v| match v {
+                            Value::Int(v) => Some(*v),
+                            Value::Long(v) => Some(*v as i32),
+                            _ => None,
+                        })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(val))?;
+            Ok(())
+        });
+        Method::new_native("java.util.Calendar".to_string(), "get".to_string(), "(I)I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getTime() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    let time = obj.fields.get("time")
+                        .and_then(|v| if let Value::Long(t) = v { Some(*t) } else { None })
+                        .unwrap_or(0);
+                    let date = HeapObject::new("java.util.Date".to_string());
+                    let date_ref = jvm.allocate(date)?;
+                    if let Some(d) = jvm.heap.get_mut(date_ref) {
+                        d.fields.insert("time".to_string(), Value::Long(time));
+                    }
+                    frame.push(Value::ObjectRef(date_ref))?;
+                    return Ok(());
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.util.Calendar".to_string(), "getTime".to_string(), "()Ljava/util/Date;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?.as_int();
+            let field = frame.pop()?.as_int();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    let key = match field {
+                        1 => "year",
+                        2 => "month",
+                        5 => "day",
+                        10 => "hour",
+                        12 => "minute",
+                        13 => "second",
+                        _ => "time",
+                    };
+                    obj.fields.insert(key.to_string(), Value::Int(value));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.util.Calendar".to_string(), "set".to_string(), "(II)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.util.Calendar", Calendar::getInstance());
+        jvm.method_area.add_native_method("java.util.Calendar", Calendar::get());
+        jvm.method_area.add_native_method("java.util.Calendar", Calendar::getTime());
+        jvm.method_area.add_native_method("java.util.Calendar", Calendar::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11360,5 +11469,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     FlowProcessor::register(jvm);
     SubmissionPublisher::register(jvm);
     Date::register(jvm);
+    Calendar::register(jvm);
     Scanner::register(jvm);
 }

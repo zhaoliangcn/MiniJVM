@@ -910,6 +910,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     DataOutputStream::register(jvm);
     PushbackInputStream::register(jvm);
     PushbackReader::register(jvm);
+    FileReader::register(jvm);
+    FileWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1537,5 +1539,58 @@ impl PushbackReader {
         jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::read());
         jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::unread());
         jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::close());
+    }
+}
+
+// ========== java.io.FileReader ==========
+
+pub struct FileReader;
+
+impl FileReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.FileReader".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.FileReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.FileReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.FileReader", FileReader::init());
+        jvm.method_area.add_native_method("java.io.FileReader", FileReader::read());
+        jvm.method_area.add_native_method("java.io.FileReader", FileReader::close());
+    }
+}
+
+// ========== java.io.FileWriter ==========
+
+pub struct FileWriter;
+
+impl FileWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.FileWriter".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.FileWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.FileWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.FileWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.FileWriter", FileWriter::init());
+        jvm.method_area.add_native_method("java.io.FileWriter", FileWriter::write());
+        jvm.method_area.add_native_method("java.io.FileWriter", FileWriter::flush());
+        jvm.method_area.add_native_method("java.io.FileWriter", FileWriter::close());
     }
 }

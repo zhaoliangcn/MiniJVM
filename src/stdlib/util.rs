@@ -12068,6 +12068,51 @@ impl ReflectAnnotatedElement {
     }
 }
 
+// ========== java.lang.annotation.Annotation ==========
+
+pub struct AnnotationInterface;
+
+impl AnnotationInterface {
+    pub fn annotationType() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("annotationType") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.annotation.Annotation".to_string(), "annotationType".to_string(), "()Ljava/lang/Class;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn toString() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("stringValue") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.annotation.Annotation".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.annotation.Annotation", AnnotationInterface::annotationType());
+        jvm.method_area.add_native_method("java.lang.annotation.Annotation", AnnotationInterface::toString());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12214,5 +12259,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectType::register(jvm);
     ReflectGenericDeclaration::register(jvm);
     ReflectAnnotatedElement::register(jvm);
+    AnnotationInterface::register(jvm);
     Scanner::register(jvm);
 }

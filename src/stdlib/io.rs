@@ -915,6 +915,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     RandomAccessFile::register(jvm);
     FileDescriptor::register(jvm);
     SequenceInputStream::register(jvm);
+    PipedInputStream::register(jvm);
+    PipedOutputStream::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1692,5 +1694,78 @@ impl SequenceInputStream {
         jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::init_two());
         jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::read());
         jvm.method_area.add_native_method("java.io.SequenceInputStream", SequenceInputStream::close());
+    }
+}
+
+// ========== java.io.PipedInputStream ==========
+
+pub struct PipedInputStream;
+
+impl PipedInputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PipedInputStream".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_connected() -> Method {
+        Method::new_native("java.io.PipedInputStream".to_string(), "<init>".to_string(), "(Ljava/io/PipedOutputStream;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.PipedInputStream".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn connect() -> Method {
+        Method::new_native("java.io.PipedInputStream".to_string(), "connect".to_string(), "(Ljava/io/PipedOutputStream;)V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PipedInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PipedInputStream", PipedInputStream::init());
+        jvm.method_area.add_native_method("java.io.PipedInputStream", PipedInputStream::init_connected());
+        jvm.method_area.add_native_method("java.io.PipedInputStream", PipedInputStream::read());
+        jvm.method_area.add_native_method("java.io.PipedInputStream", PipedInputStream::connect());
+        jvm.method_area.add_native_method("java.io.PipedInputStream", PipedInputStream::close());
+    }
+}
+
+// ========== java.io.PipedOutputStream ==========
+
+pub struct PipedOutputStream;
+
+impl PipedOutputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_connected() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "<init>".to_string(), "(Ljava/io/PipedInputStream;)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "write".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn connect() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "connect".to_string(), "(Ljava/io/PipedInputStream;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PipedOutputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::init());
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::init_connected());
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::write());
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::connect());
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::flush());
+        jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::close());
     }
 }

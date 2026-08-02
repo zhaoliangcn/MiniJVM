@@ -11981,6 +11981,33 @@ impl ReflectAccessibleObject {
     }
 }
 
+// ========== java.lang.reflect.Type ==========
+
+pub struct ReflectType;
+
+impl ReflectType {
+    pub fn getTypeName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("typeName") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Type".to_string(), "getTypeName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Type", ReflectType::getTypeName());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12124,5 +12151,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectExecutable::register(jvm);
     ReflectMember::register(jvm);
     ReflectAccessibleObject::register(jvm);
+    ReflectType::register(jvm);
     Scanner::register(jvm);
 }

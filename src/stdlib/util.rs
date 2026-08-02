@@ -11738,6 +11738,75 @@ impl ReflectConstructor {
     }
 }
 
+// ========== java.lang.reflect.Modifier ==========
+
+pub struct ReflectModifier;
+
+impl ReflectModifier {
+    pub fn isPublic() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0001 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isPublic".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isPrivate() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0002 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isPrivate".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isProtected() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0004 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isProtected".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isStatic() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0008 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isStatic".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isFinal() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0010 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isFinal".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn isAbstract() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, _jvm| {
+            let mods = frame.pop()?.as_int();
+            frame.push(Value::Boolean(mods & 0x0400 != 0))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Modifier".to_string(), "isAbstract".to_string(), "(I)Z".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isPublic());
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isPrivate());
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isProtected());
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isStatic());
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isFinal());
+        jvm.method_area.add_native_method("java.lang.reflect.Modifier", ReflectModifier::isAbstract());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11876,5 +11945,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectField::register(jvm);
     ReflectMethod::register(jvm);
     ReflectConstructor::register(jvm);
+    ReflectModifier::register(jvm);
     Scanner::register(jvm);
 }

@@ -11940,6 +11940,47 @@ impl ReflectMember {
     }
 }
 
+// ========== java.lang.reflect.AccessibleObject ==========
+
+pub struct ReflectAccessibleObject;
+
+impl ReflectAccessibleObject {
+    pub fn setAccessible() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let accessible = frame.pop()?.as_bool();
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get_mut(*this_id) {
+                    obj.fields.insert("accessible".to_string(), Value::Boolean(accessible));
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.AccessibleObject".to_string(), "setAccessible".to_string(), "(Z)V".to_string(), false, Some(native_impl))
+    }
+
+    pub fn isAccessible() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let acc = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("accessible")
+                        .and_then(|v| if let Value::Boolean(b) = v { Some(*b) } else { None })
+                        .unwrap_or(false)
+                } else { false }
+            } else { false };
+            frame.push(Value::Boolean(acc))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.AccessibleObject".to_string(), "isAccessible".to_string(), "()Z".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.AccessibleObject", ReflectAccessibleObject::setAccessible());
+        jvm.method_area.add_native_method("java.lang.reflect.AccessibleObject", ReflectAccessibleObject::isAccessible());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12082,5 +12123,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectParameter::register(jvm);
     ReflectExecutable::register(jvm);
     ReflectMember::register(jvm);
+    ReflectAccessibleObject::register(jvm);
     Scanner::register(jvm);
 }

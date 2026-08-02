@@ -11852,6 +11852,50 @@ impl ReflectParameter {
     }
 }
 
+// ========== java.lang.reflect.Executable ==========
+
+pub struct ReflectExecutable;
+
+impl ReflectExecutable {
+    pub fn getName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Executable".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getParameterCount() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let count = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("parameterCount")
+                        .and_then(|v| if let Value::Int(c) = v { Some(*c) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(count))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Executable".to_string(), "getParameterCount".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Executable", ReflectExecutable::getName());
+        jvm.method_area.add_native_method("java.lang.reflect.Executable", ReflectExecutable::getParameterCount());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11992,5 +12036,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectConstructor::register(jvm);
     ReflectModifier::register(jvm);
     ReflectParameter::register(jvm);
+    ReflectExecutable::register(jvm);
     Scanner::register(jvm);
 }

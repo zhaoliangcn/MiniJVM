@@ -908,6 +908,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     FilterOutputStream::register(jvm);
     DataInputStream::register(jvm);
     DataOutputStream::register(jvm);
+    PushbackInputStream::register(jvm);
+    PushbackReader::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1477,5 +1479,63 @@ impl DataOutputStream {
         jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeUTF());
         jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::flush());
         jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::close());
+    }
+}
+
+// ========== java.io.PushbackInputStream ==========
+
+pub struct PushbackInputStream;
+
+impl PushbackInputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PushbackInputStream".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.PushbackInputStream".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn unread() -> Method {
+        Method::new_native("java.io.PushbackInputStream".to_string(), "unread".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PushbackInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PushbackInputStream", PushbackInputStream::init());
+        jvm.method_area.add_native_method("java.io.PushbackInputStream", PushbackInputStream::read());
+        jvm.method_area.add_native_method("java.io.PushbackInputStream", PushbackInputStream::unread());
+        jvm.method_area.add_native_method("java.io.PushbackInputStream", PushbackInputStream::close());
+    }
+}
+
+// ========== java.io.PushbackReader ==========
+
+pub struct PushbackReader;
+
+impl PushbackReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PushbackReader".to_string(), "<init>".to_string(), "(Ljava/io/Reader;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.PushbackReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn unread() -> Method {
+        Method::new_native("java.io.PushbackReader".to_string(), "unread".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PushbackReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::init());
+        jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::read());
+        jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::unread());
+        jvm.method_area.add_native_method("java.io.PushbackReader", PushbackReader::close());
     }
 }

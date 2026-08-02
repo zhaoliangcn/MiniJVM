@@ -896,6 +896,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     BufferedInputStream::register(jvm);
     BufferedOutputStream::register(jvm);
     PrintWriter::register(jvm);
+    BufferedReader::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1067,5 +1068,39 @@ impl PrintWriter {
         jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::write());
         jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::flush());
         jvm.method_area.add_native_method("java.io.PrintWriter", PrintWriter::close());
+    }
+}
+
+// ========== java.io.BufferedReader ==========
+
+pub struct BufferedReader;
+
+impl BufferedReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.BufferedReader".to_string(), "<init>".to_string(), "(Ljava/io/Reader;)V".to_string(), false, None)
+    }
+
+    pub fn init_size() -> Method {
+        Method::new_native("java.io.BufferedReader".to_string(), "<init>".to_string(), "(Ljava/io/Reader;I)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.BufferedReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn readLine() -> Method {
+        Method::new_native("java.io.BufferedReader".to_string(), "readLine".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.BufferedReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::init());
+        jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::init_size());
+        jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::read());
+        jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::readLine());
+        jvm.method_area.add_native_method("java.io.BufferedReader", BufferedReader::close());
     }
 }

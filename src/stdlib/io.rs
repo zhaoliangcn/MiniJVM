@@ -917,6 +917,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     SequenceInputStream::register(jvm);
     PipedInputStream::register(jvm);
     PipedOutputStream::register(jvm);
+    LineNumberReader::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1767,5 +1768,44 @@ impl PipedOutputStream {
         jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::connect());
         jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::flush());
         jvm.method_area.add_native_method("java.io.PipedOutputStream", PipedOutputStream::close());
+    }
+}
+
+// ========== java.io.LineNumberReader ==========
+
+pub struct LineNumberReader;
+
+impl LineNumberReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "<init>".to_string(), "(Ljava/io/Reader;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn readLine() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "readLine".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn getLineNumber() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "getLineNumber".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn setLineNumber() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "setLineNumber".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.LineNumberReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::init());
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::read());
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::readLine());
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::getLineNumber());
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::setLineNumber());
+        jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::close());
     }
 }

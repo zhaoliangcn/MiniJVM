@@ -11484,6 +11484,82 @@ impl TimeZone {
     }
 }
 
+// ========== java.lang.reflect.Array ==========
+
+pub struct ReflectArray;
+
+impl ReflectArray {
+    pub fn newInstance() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let length = frame.pop()?.as_int().max(0) as usize;
+            let _component_type = frame.pop()?;
+            let arr = HeapObject::new_array("[Ljava/lang/Object;".to_string(), length);
+            let arr_ref = jvm.allocate(arr)?;
+            frame.push(Value::ArrayRef(arr_ref))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Array".to_string(), "newInstance".to_string(), "(Ljava/lang/Class;I)Ljava/lang/Object;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn getLength() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let arr_ref = frame.pop()?;
+            let len = if let Value::ArrayRef(arr_id) = arr_ref {
+                if let Some(arr) = jvm.heap.get(arr_id) {
+                    arr.array_elements.as_ref().map(|e| e.len() as i32).unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(len))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Array".to_string(), "getLength".to_string(), "(Ljava/lang/Object;)I".to_string(), true, Some(native_impl))
+    }
+
+    pub fn get() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let index = frame.pop()?.as_int() as usize;
+            let arr_ref = frame.pop()?;
+            if let Value::ArrayRef(arr_id) = arr_ref {
+                if let Some(arr) = jvm.heap.get(arr_id) {
+                    if let Some(elements) = &arr.array_elements {
+                        if index < elements.len() {
+                            frame.push(elements[index].clone())?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Array".to_string(), "get".to_string(), "(Ljava/lang/Object;I)Ljava/lang/Object;".to_string(), true, Some(native_impl))
+    }
+
+    pub fn set() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let value = frame.pop()?;
+            let index = frame.pop()?.as_int() as usize;
+            let arr_ref = frame.pop()?;
+            if let Value::ArrayRef(arr_id) = arr_ref {
+                if let Some(arr) = jvm.heap.get_mut(arr_id) {
+                    if let Some(elements) = &mut arr.array_elements {
+                        if index < elements.len() { elements[index] = value; }
+                    }
+                }
+            }
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Array".to_string(), "set".to_string(), "(Ljava/lang/Object;ILjava/lang/Object;)V".to_string(), true, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Array", ReflectArray::newInstance());
+        jvm.method_area.add_native_method("java.lang.reflect.Array", ReflectArray::getLength());
+        jvm.method_area.add_native_method("java.lang.reflect.Array", ReflectArray::get());
+        jvm.method_area.add_native_method("java.lang.reflect.Array", ReflectArray::set());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -11618,5 +11694,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     Calendar::register(jvm);
     GregorianCalendar::register(jvm);
     TimeZone::register(jvm);
+    ReflectArray::register(jvm);
     Scanner::register(jvm);
 }

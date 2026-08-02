@@ -902,6 +902,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     OutputStreamWriter::register(jvm);
     Reader::register(jvm);
     Writer::register(jvm);
+    StringReader::register(jvm);
+    StringWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1257,5 +1259,63 @@ impl Writer {
         jvm.method_area.add_native_method("java.io.Writer", Writer::write_int());
         jvm.method_area.add_native_method("java.io.Writer", Writer::flush());
         jvm.method_area.add_native_method("java.io.Writer", Writer::close());
+    }
+}
+
+// ========== java.io.StringReader ==========
+
+pub struct StringReader;
+
+impl StringReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.StringReader".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.StringReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.StringReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.StringReader", StringReader::init());
+        jvm.method_area.add_native_method("java.io.StringReader", StringReader::read());
+        jvm.method_area.add_native_method("java.io.StringReader", StringReader::close());
+    }
+}
+
+// ========== java.io.StringWriter ==========
+
+pub struct StringWriter;
+
+impl StringWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.StringWriter".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.StringWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn toString() -> Method {
+        Method::new_native("java.io.StringWriter".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.StringWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.StringWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.StringWriter", StringWriter::init());
+        jvm.method_area.add_native_method("java.io.StringWriter", StringWriter::write());
+        jvm.method_area.add_native_method("java.io.StringWriter", StringWriter::toString());
+        jvm.method_area.add_native_method("java.io.StringWriter", StringWriter::flush());
+        jvm.method_area.add_native_method("java.io.StringWriter", StringWriter::close());
     }
 }

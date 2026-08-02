@@ -11896,6 +11896,50 @@ impl ReflectExecutable {
     }
 }
 
+// ========== java.lang.reflect.Member ==========
+
+pub struct ReflectMember;
+
+impl ReflectMember {
+    pub fn getName() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    if let Some(val) = obj.fields.get("name") {
+                        frame.push(val.clone())?;
+                        return Ok(());
+                    }
+                }
+            }
+            frame.push(Value::Null)?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Member".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, Some(native_impl))
+    }
+
+    pub fn getModifiers() -> Method {
+        let native_impl: NativeImplementation = Arc::new(|frame, jvm| {
+            let this_ref = frame.get_local(0)?;
+            let mods = if let Value::ObjectRef(this_id) = this_ref {
+                if let Some(obj) = jvm.heap.get(*this_id) {
+                    obj.fields.get("modifiers")
+                        .and_then(|v| if let Value::Int(m) = v { Some(*m) } else { None })
+                        .unwrap_or(0)
+                } else { 0 }
+            } else { 0 };
+            frame.push(Value::Int(mods))?;
+            Ok(())
+        });
+        Method::new_native("java.lang.reflect.Member".to_string(), "getModifiers".to_string(), "()I".to_string(), false, Some(native_impl))
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.lang.reflect.Member", ReflectMember::getName());
+        jvm.method_area.add_native_method("java.lang.reflect.Member", ReflectMember::getModifiers());
+    }
+}
+
 /// Register all java.util classes with the JVM.
 pub fn register_util_classes(jvm: &mut JVM) {
     ArrayList::register(jvm);
@@ -12037,5 +12081,6 @@ pub fn register_util_classes(jvm: &mut JVM) {
     ReflectModifier::register(jvm);
     ReflectParameter::register(jvm);
     ReflectExecutable::register(jvm);
+    ReflectMember::register(jvm);
     Scanner::register(jvm);
 }

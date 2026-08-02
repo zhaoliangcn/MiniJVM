@@ -913,6 +913,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     FileReader::register(jvm);
     FileWriter::register(jvm);
     RandomAccessFile::register(jvm);
+    FileDescriptor::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1637,5 +1638,29 @@ impl RandomAccessFile {
         jvm.method_area.add_native_method("java.io.RandomAccessFile", RandomAccessFile::write());
         jvm.method_area.add_native_method("java.io.RandomAccessFile", RandomAccessFile::length());
         jvm.method_area.add_native_method("java.io.RandomAccessFile", RandomAccessFile::close());
+    }
+}
+
+// ========== java.io.FileDescriptor ==========
+
+pub struct FileDescriptor;
+
+impl FileDescriptor {
+    pub fn init() -> Method {
+        Method::new_native("java.io.FileDescriptor".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn sync() -> Method {
+        Method::new_native("java.io.FileDescriptor".to_string(), "sync".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn valid() -> Method {
+        Method::new_native("java.io.FileDescriptor".to_string(), "valid".to_string(), "()Z".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::init());
+        jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::sync());
+        jvm.method_area.add_native_method("java.io.FileDescriptor", FileDescriptor::valid());
     }
 }

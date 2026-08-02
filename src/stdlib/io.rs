@@ -906,6 +906,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     StringWriter::register(jvm);
     FilterInputStream::register(jvm);
     FilterOutputStream::register(jvm);
+    DataInputStream::register(jvm);
+    DataOutputStream::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1382,5 +1384,98 @@ impl FilterOutputStream {
         jvm.method_area.add_native_method("java.io.FilterOutputStream", FilterOutputStream::write_bytes());
         jvm.method_area.add_native_method("java.io.FilterOutputStream", FilterOutputStream::flush());
         jvm.method_area.add_native_method("java.io.FilterOutputStream", FilterOutputStream::close());
+    }
+}
+
+// ========== java.io.DataInputStream ==========
+
+pub struct DataInputStream;
+
+impl DataInputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, None)
+    }
+
+    pub fn readInt() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "readInt".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn readLong() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "readLong".to_string(), "()J".to_string(), false, None)
+    }
+
+    pub fn readDouble() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "readDouble".to_string(), "()D".to_string(), false, None)
+    }
+
+    pub fn readBoolean() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "readBoolean".to_string(), "()Z".to_string(), false, None)
+    }
+
+    pub fn readUTF() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "readUTF".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.DataInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::init());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::readInt());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::readLong());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::readDouble());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::readBoolean());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::readUTF());
+        jvm.method_area.add_native_method("java.io.DataInputStream", DataInputStream::close());
+    }
+}
+
+// ========== java.io.DataOutputStream ==========
+
+pub struct DataOutputStream;
+
+impl DataOutputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "<init>".to_string(), "(Ljava/io/OutputStream;)V".to_string(), false, None)
+    }
+
+    pub fn writeInt() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "writeInt".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn writeLong() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "writeLong".to_string(), "(J)V".to_string(), false, None)
+    }
+
+    pub fn writeDouble() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "writeDouble".to_string(), "(D)V".to_string(), false, None)
+    }
+
+    pub fn writeBoolean() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "writeBoolean".to_string(), "(Z)V".to_string(), false, None)
+    }
+
+    pub fn writeUTF() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "writeUTF".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.DataOutputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::init());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeInt());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeLong());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeDouble());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeBoolean());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::writeUTF());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::flush());
+        jvm.method_area.add_native_method("java.io.DataOutputStream", DataOutputStream::close());
     }
 }

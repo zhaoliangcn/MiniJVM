@@ -919,6 +919,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     PipedOutputStream::register(jvm);
     LineNumberReader::register(jvm);
     Console::register(jvm);
+    FilterReader::register(jvm);
+    FilterWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1842,5 +1844,58 @@ impl Console {
         jvm.method_area.add_native_method("java.io.Console", Console::printf());
         jvm.method_area.add_native_method("java.io.Console", Console::format());
         jvm.method_area.add_native_method("java.io.Console", Console::flush());
+    }
+}
+
+// ========== java.io.FilterReader ==========
+
+pub struct FilterReader;
+
+impl FilterReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.FilterReader".to_string(), "<init>".to_string(), "(Ljava/io/Reader;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.FilterReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.FilterReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.FilterReader", FilterReader::init());
+        jvm.method_area.add_native_method("java.io.FilterReader", FilterReader::read());
+        jvm.method_area.add_native_method("java.io.FilterReader", FilterReader::close());
+    }
+}
+
+// ========== java.io.FilterWriter ==========
+
+pub struct FilterWriter;
+
+impl FilterWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.FilterWriter".to_string(), "<init>".to_string(), "(Ljava/io/Writer;)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.FilterWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.FilterWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.FilterWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::init());
+        jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::write());
+        jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::flush());
+        jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::close());
     }
 }

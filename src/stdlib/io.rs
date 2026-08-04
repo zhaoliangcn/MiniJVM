@@ -921,6 +921,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     Console::register(jvm);
     FilterReader::register(jvm);
     FilterWriter::register(jvm);
+    CharArrayReader::register(jvm);
+    CharArrayWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1897,5 +1899,68 @@ impl FilterWriter {
         jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::write());
         jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::flush());
         jvm.method_area.add_native_method("java.io.FilterWriter", FilterWriter::close());
+    }
+}
+
+// ========== java.io.CharArrayReader ==========
+
+pub struct CharArrayReader;
+
+impl CharArrayReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.CharArrayReader".to_string(), "<init>".to_string(), "([C)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.CharArrayReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.CharArrayReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.CharArrayReader", CharArrayReader::init());
+        jvm.method_area.add_native_method("java.io.CharArrayReader", CharArrayReader::read());
+        jvm.method_area.add_native_method("java.io.CharArrayReader", CharArrayReader::close());
+    }
+}
+
+// ========== java.io.CharArrayWriter ==========
+
+pub struct CharArrayWriter;
+
+impl CharArrayWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_size() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "<init>".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn toString() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "toString".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn size() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "size".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.CharArrayWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::init());
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::init_size());
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::write());
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::toString());
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::size());
+        jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::close());
     }
 }

@@ -923,6 +923,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     FilterWriter::register(jvm);
     CharArrayReader::register(jvm);
     CharArrayWriter::register(jvm);
+    PipedReader::register(jvm);
+    PipedWriter::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1962,5 +1964,78 @@ impl CharArrayWriter {
         jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::toString());
         jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::size());
         jvm.method_area.add_native_method("java.io.CharArrayWriter", CharArrayWriter::close());
+    }
+}
+
+// ========== java.io.PipedReader ==========
+
+pub struct PipedReader;
+
+impl PipedReader {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PipedReader".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_connected() -> Method {
+        Method::new_native("java.io.PipedReader".to_string(), "<init>".to_string(), "(Ljava/io/PipedWriter;)V".to_string(), false, None)
+    }
+
+    pub fn read() -> Method {
+        Method::new_native("java.io.PipedReader".to_string(), "read".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn connect() -> Method {
+        Method::new_native("java.io.PipedReader".to_string(), "connect".to_string(), "(Ljava/io/PipedWriter;)V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PipedReader".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PipedReader", PipedReader::init());
+        jvm.method_area.add_native_method("java.io.PipedReader", PipedReader::init_connected());
+        jvm.method_area.add_native_method("java.io.PipedReader", PipedReader::read());
+        jvm.method_area.add_native_method("java.io.PipedReader", PipedReader::connect());
+        jvm.method_area.add_native_method("java.io.PipedReader", PipedReader::close());
+    }
+}
+
+// ========== java.io.PipedWriter ==========
+
+pub struct PipedWriter;
+
+impl PipedWriter {
+    pub fn init() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_connected() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "<init>".to_string(), "(Ljava/io/PipedReader;)V".to_string(), false, None)
+    }
+
+    pub fn write() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "write".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn connect() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "connect".to_string(), "(Ljava/io/PipedReader;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.PipedWriter".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::init());
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::init_connected());
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::write());
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::connect());
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::flush());
+        jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::close());
     }
 }

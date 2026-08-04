@@ -918,6 +918,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     PipedInputStream::register(jvm);
     PipedOutputStream::register(jvm);
     LineNumberReader::register(jvm);
+    Console::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -1807,5 +1808,39 @@ impl LineNumberReader {
         jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::getLineNumber());
         jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::setLineNumber());
         jvm.method_area.add_native_method("java.io.LineNumberReader", LineNumberReader::close());
+    }
+}
+
+// ========== java.io.Console ==========
+
+pub struct Console;
+
+impl Console {
+    pub fn readLine() -> Method {
+        Method::new_native("java.io.Console".to_string(), "readLine".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn readLine_fmt() -> Method {
+        Method::new_native("java.io.Console".to_string(), "readLine".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn printf() -> Method {
+        Method::new_native("java.io.Console".to_string(), "printf".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/Console;".to_string(), false, None)
+    }
+
+    pub fn format() -> Method {
+        Method::new_native("java.io.Console".to_string(), "format".to_string(), "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/Console;".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.Console".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.Console", Console::readLine());
+        jvm.method_area.add_native_method("java.io.Console", Console::readLine_fmt());
+        jvm.method_area.add_native_method("java.io.Console", Console::printf());
+        jvm.method_area.add_native_method("java.io.Console", Console::format());
+        jvm.method_area.add_native_method("java.io.Console", Console::flush());
     }
 }

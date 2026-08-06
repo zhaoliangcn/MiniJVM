@@ -936,6 +936,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     InvalidObjectException::register(jvm);
     StreamCorruptedException::register(jvm);
     OptionalDataException::register(jvm);
+    WriteAbortedException::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2274,5 +2275,19 @@ pub struct OptionalDataException;
 impl OptionalDataException {
     pub fn register(jvm: &mut JVM) {
         // OptionalDataException has fields (length/eof), no constructor methods to register
+    }
+}
+
+// ========== java.io.WriteAbortedException ==========
+
+pub struct WriteAbortedException;
+
+impl WriteAbortedException {
+    pub fn init_msg() -> Method {
+        Method::new_native("java.io.WriteAbortedException".to_string(), "<init>".to_string(), "(Ljava/lang/String;Ljava/lang/Exception;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.WriteAbortedException", WriteAbortedException::init_msg());
     }
 }

@@ -926,6 +926,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     PipedReader::register(jvm);
     PipedWriter::register(jvm);
     Serializable::register(jvm);
+    ObjectInput::register(jvm);
+    ObjectOutput::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2048,5 +2050,58 @@ pub struct Serializable;
 impl Serializable {
     pub fn register(jvm: &mut JVM) {
         // Serializable is a marker interface, no methods to register
+    }
+}
+
+// ========== java.io.ObjectInput ==========
+
+pub struct ObjectInput;
+
+impl ObjectInput {
+    pub fn readInt() -> Method {
+        Method::new_native("java.io.ObjectInput".to_string(), "readInt".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn readObject() -> Method {
+        Method::new_native("java.io.ObjectInput".to_string(), "readObject".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.ObjectInput".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectInput", ObjectInput::readInt());
+        jvm.method_area.add_native_method("java.io.ObjectInput", ObjectInput::readObject());
+        jvm.method_area.add_native_method("java.io.ObjectInput", ObjectInput::close());
+    }
+}
+
+// ========== java.io.ObjectOutput ==========
+
+pub struct ObjectOutput;
+
+impl ObjectOutput {
+    pub fn writeInt() -> Method {
+        Method::new_native("java.io.ObjectOutput".to_string(), "writeInt".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn writeObject() -> Method {
+        Method::new_native("java.io.ObjectOutput".to_string(), "writeObject".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.ObjectOutput".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.ObjectOutput".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::writeInt());
+        jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::writeObject());
+        jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::flush());
+        jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::close());
     }
 }

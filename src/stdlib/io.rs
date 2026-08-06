@@ -932,6 +932,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     ObjectOutputStream::register(jvm);
     Externalizable::register(jvm);
     ObjectStreamException::register(jvm);
+    NotSerializableException::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2208,5 +2209,24 @@ impl ObjectStreamException {
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.io.ObjectStreamException", ObjectStreamException::init());
         jvm.method_area.add_native_method("java.io.ObjectStreamException", ObjectStreamException::init_msg());
+    }
+}
+
+// ========== java.io.NotSerializableException ==========
+
+pub struct NotSerializableException;
+
+impl NotSerializableException {
+    pub fn init() -> Method {
+        Method::new_native("java.io.NotSerializableException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_msg() -> Method {
+        Method::new_native("java.io.NotSerializableException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.NotSerializableException", NotSerializableException::init());
+        jvm.method_area.add_native_method("java.io.NotSerializableException", NotSerializableException::init_msg());
     }
 }

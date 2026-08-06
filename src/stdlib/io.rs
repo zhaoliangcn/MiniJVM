@@ -938,6 +938,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     OptionalDataException::register(jvm);
     WriteAbortedException::register(jvm);
     ObjectStreamClass::register(jvm);
+    ObjectStreamConstants::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2319,5 +2320,15 @@ impl ObjectStreamClass {
         jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::forClass());
         jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::lookup());
         jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::getSerialVersionUID());
+    }
+}
+
+// ========== java.io.ObjectStreamConstants ==========
+
+pub struct ObjectStreamConstants;
+
+impl ObjectStreamConstants {
+    pub fn register(jvm: &mut JVM) {
+        // ObjectStreamConstants is an interface with constants only, no methods to register
     }
 }

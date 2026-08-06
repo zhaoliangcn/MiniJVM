@@ -937,6 +937,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     StreamCorruptedException::register(jvm);
     OptionalDataException::register(jvm);
     WriteAbortedException::register(jvm);
+    ObjectStreamClass::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2289,5 +2290,34 @@ impl WriteAbortedException {
 
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.io.WriteAbortedException", WriteAbortedException::init_msg());
+    }
+}
+
+// ========== java.io.ObjectStreamClass ==========
+
+pub struct ObjectStreamClass;
+
+impl ObjectStreamClass {
+    pub fn getName() -> Method {
+        Method::new_native("java.io.ObjectStreamClass".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn forClass() -> Method {
+        Method::new_native("java.io.ObjectStreamClass".to_string(), "forClass".to_string(), "()Ljava/lang/Class;".to_string(), false, None)
+    }
+
+    pub fn lookup() -> Method {
+        Method::new_native("java.io.ObjectStreamClass".to_string(), "lookup".to_string(), "(Ljava/lang/Class;)Ljava/io/ObjectStreamClass;".to_string(), true, None)
+    }
+
+    pub fn getSerialVersionUID() -> Method {
+        Method::new_native("java.io.ObjectStreamClass".to_string(), "getSerialVersionUID".to_string(), "()J".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::getName());
+        jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::forClass());
+        jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::lookup());
+        jvm.method_area.add_native_method("java.io.ObjectStreamClass", ObjectStreamClass::getSerialVersionUID());
     }
 }

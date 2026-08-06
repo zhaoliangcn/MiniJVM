@@ -935,6 +935,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     NotSerializableException::register(jvm);
     InvalidObjectException::register(jvm);
     StreamCorruptedException::register(jvm);
+    OptionalDataException::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2263,5 +2264,15 @@ impl StreamCorruptedException {
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.io.StreamCorruptedException", StreamCorruptedException::init());
         jvm.method_area.add_native_method("java.io.StreamCorruptedException", StreamCorruptedException::init_msg());
+    }
+}
+
+// ========== java.io.OptionalDataException ==========
+
+pub struct OptionalDataException;
+
+impl OptionalDataException {
+    pub fn register(jvm: &mut JVM) {
+        // OptionalDataException has fields (length/eof), no constructor methods to register
     }
 }

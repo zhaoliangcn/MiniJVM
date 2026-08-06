@@ -928,6 +928,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     Serializable::register(jvm);
     ObjectInput::register(jvm);
     ObjectOutput::register(jvm);
+    ObjectInputStream::register(jvm);
+    ObjectOutputStream::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2103,5 +2105,68 @@ impl ObjectOutput {
         jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::writeObject());
         jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::flush());
         jvm.method_area.add_native_method("java.io.ObjectOutput", ObjectOutput::close());
+    }
+}
+
+// ========== java.io.ObjectInputStream ==========
+
+pub struct ObjectInputStream;
+
+impl ObjectInputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.ObjectInputStream".to_string(), "<init>".to_string(), "(Ljava/io/InputStream;)V".to_string(), false, None)
+    }
+
+    pub fn readObject() -> Method {
+        Method::new_native("java.io.ObjectInputStream".to_string(), "readObject".to_string(), "()Ljava/lang/Object;".to_string(), false, None)
+    }
+
+    pub fn readInt() -> Method {
+        Method::new_native("java.io.ObjectInputStream".to_string(), "readInt".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.ObjectInputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectInputStream", ObjectInputStream::init());
+        jvm.method_area.add_native_method("java.io.ObjectInputStream", ObjectInputStream::readObject());
+        jvm.method_area.add_native_method("java.io.ObjectInputStream", ObjectInputStream::readInt());
+        jvm.method_area.add_native_method("java.io.ObjectInputStream", ObjectInputStream::close());
+    }
+}
+
+// ========== java.io.ObjectOutputStream ==========
+
+pub struct ObjectOutputStream;
+
+impl ObjectOutputStream {
+    pub fn init() -> Method {
+        Method::new_native("java.io.ObjectOutputStream".to_string(), "<init>".to_string(), "(Ljava/io/OutputStream;)V".to_string(), false, None)
+    }
+
+    pub fn writeObject() -> Method {
+        Method::new_native("java.io.ObjectOutputStream".to_string(), "writeObject".to_string(), "(Ljava/lang/Object;)V".to_string(), false, None)
+    }
+
+    pub fn writeInt() -> Method {
+        Method::new_native("java.io.ObjectOutputStream".to_string(), "writeInt".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn flush() -> Method {
+        Method::new_native("java.io.ObjectOutputStream".to_string(), "flush".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn close() -> Method {
+        Method::new_native("java.io.ObjectOutputStream".to_string(), "close".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::init());
+        jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::writeObject());
+        jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::writeInt());
+        jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::flush());
+        jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::close());
     }
 }

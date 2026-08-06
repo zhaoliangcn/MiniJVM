@@ -934,6 +934,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     ObjectStreamException::register(jvm);
     NotSerializableException::register(jvm);
     InvalidObjectException::register(jvm);
+    StreamCorruptedException::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2243,5 +2244,24 @@ impl InvalidObjectException {
 
     pub fn register(jvm: &mut JVM) {
         jvm.method_area.add_native_method("java.io.InvalidObjectException", InvalidObjectException::init_msg());
+    }
+}
+
+// ========== java.io.StreamCorruptedException ==========
+
+pub struct StreamCorruptedException;
+
+impl StreamCorruptedException {
+    pub fn init() -> Method {
+        Method::new_native("java.io.StreamCorruptedException".to_string(), "<init>".to_string(), "()V".to_string(), false, None)
+    }
+
+    pub fn init_msg() -> Method {
+        Method::new_native("java.io.StreamCorruptedException".to_string(), "<init>".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.StreamCorruptedException", StreamCorruptedException::init());
+        jvm.method_area.add_native_method("java.io.StreamCorruptedException", StreamCorruptedException::init_msg());
     }
 }

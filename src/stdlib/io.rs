@@ -930,6 +930,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     ObjectOutput::register(jvm);
     ObjectInputStream::register(jvm);
     ObjectOutputStream::register(jvm);
+    Externalizable::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2168,5 +2169,24 @@ impl ObjectOutputStream {
         jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::writeInt());
         jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::flush());
         jvm.method_area.add_native_method("java.io.ObjectOutputStream", ObjectOutputStream::close());
+    }
+}
+
+// ========== java.io.Externalizable ==========
+
+pub struct Externalizable;
+
+impl Externalizable {
+    pub fn writeExternal() -> Method {
+        Method::new_native("java.io.Externalizable".to_string(), "writeExternal".to_string(), "(Ljava/io/ObjectOutput;)V".to_string(), false, None)
+    }
+
+    pub fn readExternal() -> Method {
+        Method::new_native("java.io.Externalizable".to_string(), "readExternal".to_string(), "(Ljava/io/ObjectInput;)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.Externalizable", Externalizable::writeExternal());
+        jvm.method_area.add_native_method("java.io.Externalizable", Externalizable::readExternal());
     }
 }

@@ -925,6 +925,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     CharArrayWriter::register(jvm);
     PipedReader::register(jvm);
     PipedWriter::register(jvm);
+    Serializable::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2037,5 +2038,15 @@ impl PipedWriter {
         jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::connect());
         jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::flush());
         jvm.method_area.add_native_method("java.io.PipedWriter", PipedWriter::close());
+    }
+}
+
+// ========== java.io.Serializable ==========
+
+pub struct Serializable;
+
+impl Serializable {
+    pub fn register(jvm: &mut JVM) {
+        // Serializable is a marker interface, no methods to register
     }
 }

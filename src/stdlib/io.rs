@@ -939,6 +939,8 @@ pub fn register_io_classes(jvm: &mut JVM) {
     WriteAbortedException::register(jvm);
     ObjectStreamClass::register(jvm);
     ObjectStreamConstants::register(jvm);
+    DataInput::register(jvm);
+    DataOutput::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2330,5 +2332,63 @@ pub struct ObjectStreamConstants;
 impl ObjectStreamConstants {
     pub fn register(jvm: &mut JVM) {
         // ObjectStreamConstants is an interface with constants only, no methods to register
+    }
+}
+
+// ========== java.io.DataInput ==========
+
+pub struct DataInput;
+
+impl DataInput {
+    pub fn readInt() -> Method {
+        Method::new_native("java.io.DataInput".to_string(), "readInt".to_string(), "()I".to_string(), false, None)
+    }
+
+    pub fn readLong() -> Method {
+        Method::new_native("java.io.DataInput".to_string(), "readLong".to_string(), "()J".to_string(), false, None)
+    }
+
+    pub fn readUTF() -> Method {
+        Method::new_native("java.io.DataInput".to_string(), "readUTF".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn readBoolean() -> Method {
+        Method::new_native("java.io.DataInput".to_string(), "readBoolean".to_string(), "()Z".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.DataInput", DataInput::readInt());
+        jvm.method_area.add_native_method("java.io.DataInput", DataInput::readLong());
+        jvm.method_area.add_native_method("java.io.DataInput", DataInput::readUTF());
+        jvm.method_area.add_native_method("java.io.DataInput", DataInput::readBoolean());
+    }
+}
+
+// ========== java.io.DataOutput ==========
+
+pub struct DataOutput;
+
+impl DataOutput {
+    pub fn writeInt() -> Method {
+        Method::new_native("java.io.DataOutput".to_string(), "writeInt".to_string(), "(I)V".to_string(), false, None)
+    }
+
+    pub fn writeLong() -> Method {
+        Method::new_native("java.io.DataOutput".to_string(), "writeLong".to_string(), "(J)V".to_string(), false, None)
+    }
+
+    pub fn writeUTF() -> Method {
+        Method::new_native("java.io.DataOutput".to_string(), "writeUTF".to_string(), "(Ljava/lang/String;)V".to_string(), false, None)
+    }
+
+    pub fn writeBoolean() -> Method {
+        Method::new_native("java.io.DataOutput".to_string(), "writeBoolean".to_string(), "(Z)V".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeInt());
+        jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeLong());
+        jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeUTF());
+        jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeBoolean());
     }
 }

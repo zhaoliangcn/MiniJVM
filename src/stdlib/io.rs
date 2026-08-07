@@ -941,6 +941,7 @@ pub fn register_io_classes(jvm: &mut JVM) {
     ObjectStreamConstants::register(jvm);
     DataInput::register(jvm);
     DataOutput::register(jvm);
+    ObjectStreamField::register(jvm);
 }
 
 // ========== java.io.BufferedInputStream ==========
@@ -2390,5 +2391,29 @@ impl DataOutput {
         jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeLong());
         jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeUTF());
         jvm.method_area.add_native_method("java.io.DataOutput", DataOutput::writeBoolean());
+    }
+}
+
+// ========== java.io.ObjectStreamField ==========
+
+pub struct ObjectStreamField;
+
+impl ObjectStreamField {
+    pub fn getName() -> Method {
+        Method::new_native("java.io.ObjectStreamField".to_string(), "getName".to_string(), "()Ljava/lang/String;".to_string(), false, None)
+    }
+
+    pub fn getType() -> Method {
+        Method::new_native("java.io.ObjectStreamField".to_string(), "getType".to_string(), "()Ljava/lang/Class;".to_string(), false, None)
+    }
+
+    pub fn getTypeCode() -> Method {
+        Method::new_native("java.io.ObjectStreamField".to_string(), "getTypeCode".to_string(), "()C".to_string(), false, None)
+    }
+
+    pub fn register(jvm: &mut JVM) {
+        jvm.method_area.add_native_method("java.io.ObjectStreamField", ObjectStreamField::getName());
+        jvm.method_area.add_native_method("java.io.ObjectStreamField", ObjectStreamField::getType());
+        jvm.method_area.add_native_method("java.io.ObjectStreamField", ObjectStreamField::getTypeCode());
     }
 }
